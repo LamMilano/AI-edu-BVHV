@@ -1,6 +1,6 @@
 import React, { useState } from "react";
-import { 
-  Brain, Zap, Cpu, Award, FileText, Clock, MapPin, 
+import {
+  Brain, Zap, Cpu, Award, FileText, Clock, MapPin,
   Calendar, ShieldAlert, Sparkles, ChevronRight, FileSpreadsheet, AppWindow, ArrowRight,
   Database, Activity, Server, ArrowUpRight
 } from "lucide-react";
@@ -35,12 +35,12 @@ export default function HomePortal({ onStartSurvey }: HomePortalProps) {
 
   return (
     <div className="space-y-12 pb-16">
-      
+
       {/* FUTURISTIC HERO BANNER WITH AI STATUS BOARD */}
       <section className="relative overflow-hidden bg-slate-950 text-white p-8 sm:p-12 md:p-16 rounded-3xl border border-slate-800 shadow-2xl">
         {/* Subtle grid decoration */}
         <div className="absolute inset-0 bg-[linear-gradient(to_right,#121b2e_1px,transparent_1px),linear-gradient(to_bottom,#121b2e_1px,transparent_1px)] bg-[size:3rem_3rem] [mask-image:radial-gradient(ellipse_60%_50%_at_50%_0%,#000_80%,transparent_100%)] opacity-40" />
-        
+
         {/* Dynamic glowing radial backgrounds */}
         <div className="absolute -top-12 -left-12 w-80 h-80 rounded-full bg-blue-600/10 blur-3xl pointer-events-none" />
         <div className="absolute -bottom-12 -right-12 w-80 h-80 rounded-full bg-purple-600/10 blur-3xl pointer-events-none" />
@@ -49,20 +49,21 @@ export default function HomePortal({ onStartSurvey }: HomePortalProps) {
           {/* Hero text */}
           <div className="lg:col-span-7 space-y-6 text-left">
             <HungVuongLogo variant="dark" size="lg" className="mb-2 bg-slate-900/60 p-4 rounded-2xl border border-slate-800/80 backdrop-blur-xs w-fit shadow-inner" />
-            
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-blue-500/10 border border-blue-500/30 text-xs font-semibold text-blue-400 tracking-wide">
+
+            <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-blue-500/10 border border-blue-500/30 text-sm font-semibold text-blue-400 tracking-wide">
               <Sparkles className="w-3.5 h-3.5 animate-pulse text-blue-400" />
-              <span>Chương trình Đào tạo AI Chuyên sâu 2026</span>
+              <span>Chương trình Đào tạo AI Nội bộ</span>
             </div>
-            
+
             <h1 className="text-3xl sm:text-4xl md:text-5xl font-black font-sans tracking-tight leading-tight">
-              Khai Phá Sức Mạnh <br />
+              Đào tạo - Chia sẻ <br />
               <span className="bg-clip-text text-transparent bg-gradient-to-r from-blue-400 via-indigo-300 to-purple-400">
-                AI Phục Vụ Y Tế Lâm Sàng
+                AI TRONG Y TẾ
+
               </span>
             </h1>
-            
-            <p className="text-sm sm:text-base text-slate-400 max-w-xl font-sans font-light leading-relaxed">
+
+            <p className="text-base sm:text-lg text-slate-300 max-w-xl font-sans font-light leading-relaxed">
               Giải pháp tối ưu hóa thời gian nghiên cứu tài liệu, soạn thảo văn bản, và tự động hóa quy trình nội bộ bệnh viện. Làm khảo sát chẩn đoán năng lực của bạn trong 2 phút để xếp lớp tối ưu.
             </p>
 
@@ -72,7 +73,7 @@ export default function HomePortal({ onStartSurvey }: HomePortalProps) {
                 onClick={onStartSurvey}
                 className="w-full sm:w-auto px-7 py-3.5 bg-blue-600 hover:bg-blue-500 active:bg-blue-700 text-white font-bold rounded-xl shadow-lg shadow-blue-500/10 hover:shadow-blue-500/20 transition-all flex items-center justify-center gap-2 group cursor-pointer"
               >
-                Khởi chạy Chẩn đoán Phân lớp
+                Đăng ký tham gia khóa học
                 <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
               </button>
               <a
@@ -89,35 +90,30 @@ export default function HomePortal({ onStartSurvey }: HomePortalProps) {
             <div className="flex items-center justify-between border-b border-slate-800 pb-3">
               <div className="flex items-center gap-2">
                 <div className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse" />
-                <span className="text-xs font-mono font-bold text-slate-300 uppercase tracking-wider">AI DIAGNOSTIC TERMINAL</span>
+                <span className="text-sm font-mono font-bold text-slate-200 uppercase tracking-wider">AI DIAGNOSTIC TERMINAL</span>
               </div>
-              <span className="text-[10px] bg-slate-800 px-2 py-0.5 rounded-md text-slate-400 font-mono">v1.2.6</span>
+              <span className="text-xs bg-slate-800 px-2 py-0.5 rounded-md text-slate-300 font-mono">v1.2.6</span>
             </div>
 
-            <div className="space-y-3">
-              <div className="flex items-center justify-between text-xs font-mono">
-                <span className="text-slate-500">Trạng thái hệ thống</span>
-                <span className="text-emerald-400 font-bold">HOẠT ĐỘNG (SẴN SÀNG)</span>
+            <div className="space-y-3.5">
+              <div className="flex items-center justify-between gap-3 text-sm font-mono">
+                <span className="text-slate-400">Trạng thái hệ thống</span>
+                <span className="text-emerald-400 font-bold text-right">HOẠT ĐỘNG (SẴN SÀNG)</span>
               </div>
-              <div className="flex items-center justify-between text-xs font-mono">
-                <span className="text-slate-500">Trí tuệ nhân lực</span>
-                <span className="text-blue-400 font-bold">Khảo sát Phân lớp</span>
+              <div className="flex items-center justify-between gap-3 text-sm font-mono">
+                <span className="text-slate-400">Trí tuệ nhân lực</span>
+                <span className="text-blue-400 font-bold text-right">Khảo sát Phân lớp</span>
               </div>
-              <div className="flex items-center justify-between text-xs font-mono">
-                <span className="text-slate-500">Mô hình phân loại</span>
-                <span className="text-purple-400 font-bold">Gemini Clinical Scoring</span>
+              <div className="flex items-center justify-between gap-3 text-sm font-mono">
+                <span className="text-slate-400">Mô hình phân loại</span>
+                <span className="text-purple-400 font-bold text-right">Gemini Clinical Scoring</span>
               </div>
-              <div className="flex items-center justify-between text-xs font-mono">
-                <span className="text-slate-500">Khung đào tạo chính</span>
-                <span className="text-slate-300">Level 1 | Level 2 | Level 3</span>
+              <div className="flex items-center justify-between gap-3 text-sm font-mono">
+                <span className="text-slate-400">Khung đào tạo chính</span>
+                <span className="text-slate-200 text-right">Level 1 | Level 2 | Level 3</span>
               </div>
             </div>
 
-            <div className="pt-2">
-              <div className="p-3 bg-slate-950/50 border border-slate-850 rounded-xl text-center">
-                <span className="text-[11px] text-slate-400 font-mono">Hệ thống sẵn sàng cho chẩn đoán phân lớp. Nhấp "Khởi chạy Chẩn đoán Phân lớp" để xác định trình độ học tập phù hợp nhất.</span>
-              </div>
-            </div>
           </div>
 
         </div>
@@ -131,7 +127,7 @@ export default function HomePortal({ onStartSurvey }: HomePortalProps) {
           </div>
           <div>
             <h3 className="font-bold text-white text-base">Sử dụng AI An Toàn & Bảo Mật</h3>
-            <p className="text-sm text-slate-400 mt-1.5 leading-relaxed">
+            <p className="text-base text-slate-300 mt-1.5 leading-relaxed">
               Chuẩn hóa quy tắc sử dụng AI an toàn, nghiêm cấm tiết lộ thông tin bệnh nhân và bảo mật tối đa dữ liệu nghiệp vụ của bệnh viện.
             </p>
           </div>
@@ -143,7 +139,7 @@ export default function HomePortal({ onStartSurvey }: HomePortalProps) {
           </div>
           <div>
             <h3 className="font-bold text-white text-base">Thực Hành Trên Việc Thật</h3>
-            <p className="text-sm text-slate-400 mt-1.5 leading-relaxed">
+            <p className="text-base text-slate-300 mt-1.5 leading-relaxed">
               Học viên mang theo công việc hàng ngày của chính khoa/phòng mình để thực hành giải quyết ngay tại lớp học, không dùng case study mẫu.
             </p>
           </div>
@@ -155,7 +151,7 @@ export default function HomePortal({ onStartSurvey }: HomePortalProps) {
           </div>
           <div>
             <h3 className="font-bold text-white text-base">Tỷ Lệ Thực Hành Vượt Trội (30/70)</h3>
-            <p className="text-sm text-slate-400 mt-1.5 leading-relaxed">
+            <p className="text-base text-slate-300 mt-1.5 leading-relaxed">
               Lý thuyết tinh giản tối đa (chiếm 30% thời lượng). Dành trọn vẹn 70% thời gian thực hành tương tác trực tiếp trên máy tính.
             </p>
           </div>
@@ -166,7 +162,7 @@ export default function HomePortal({ onStartSurvey }: HomePortalProps) {
       <section id="curriculum-section" className="space-y-6">
         <div className="text-center md:text-left">
           <h2 className="text-2xl font-black text-white tracking-tight">Chương Trình Đào Tạo Phân Cấp</h2>
-          <p className="text-sm text-slate-400 mt-1">
+          <p className="text-base text-slate-300 mt-1">
             Chương trình được thiết kế thành 3 cấp độ phù hợp cho mọi đối tượng từ chưa có kinh nghiệm đến chuyên sâu.
           </p>
         </div>
@@ -177,11 +173,11 @@ export default function HomePortal({ onStartSurvey }: HomePortalProps) {
             <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-blue-500 to-indigo-500" />
             <div className="space-y-4">
               <div className="flex items-center justify-between">
-                <span className="px-3 py-1 bg-blue-500/10 border border-blue-500/20 text-blue-400 rounded-full text-xs font-semibold uppercase tracking-wider">
+                <span className="px-3 py-1 bg-blue-500/10 border border-blue-500/20 text-blue-400 rounded-full text-sm font-semibold uppercase tracking-wider">
                   Cấp Độ 1
                 </span>
-                <span className="text-xs text-slate-500 flex items-center gap-1 font-mono">
-                  <Clock className="w-3.5 h-3.5" /> 120 phút
+                <span className="text-sm text-slate-400 flex items-center gap-1 font-mono">
+                  <Clock className="w-4 h-4" /> 120 phút
                 </span>
               </div>
               <div>
@@ -189,16 +185,13 @@ export default function HomePortal({ onStartSurvey }: HomePortalProps) {
                   Daily Work AI
                   <ArrowUpRight className="w-4 h-4 text-slate-600 group-hover:text-blue-400 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-all" />
                 </h3>
-                <p className="text-xs text-blue-400 mt-0.5 font-semibold">AI cho công việc hàng ngày</p>
-                <p className="text-sm text-slate-400 mt-2.5 leading-relaxed font-sans font-light">
-                  Dành cho toàn thể nhân viên. Làm quen với tư duy hỏi đáp AI, nâng cao kỹ năng soạn văn bản, tổng hợp báo cáo bằng các công cụ thông dụng.
-                </p>
+                <p className="text-sm text-blue-400 mt-0.5 font-semibold">AI cho công việc hàng ngày</p>
               </div>
               <div className="pt-2 border-t border-slate-800 space-y-2">
-                <p className="text-xs font-bold text-slate-300">Bộ công cụ cốt lõi:</p>
+                <p className="text-sm font-bold text-slate-200">Bộ công cụ cốt lõi:</p>
                 <div className="flex flex-wrap gap-1.5">
                   {["ChatGPT/Gemini", "NotebookLM", "Gems", "Office AI", "Gamma/Napkin"].map((tool) => (
-                    <span key={tool} className="text-[11px] px-2.5 py-1 bg-slate-950 text-slate-400 rounded-lg border border-slate-850 font-mono">
+                    <span key={tool} className="text-sm px-2.5 py-1 bg-slate-950 text-slate-300 rounded-lg border border-slate-850 font-mono">
                       {tool}
                     </span>
                   ))}
@@ -211,7 +204,7 @@ export default function HomePortal({ onStartSurvey }: HomePortalProps) {
                   setSelectedLevelTab("L1");
                   document.getElementById("agenda-tab")?.scrollIntoView({ behavior: "smooth" });
                 }}
-                className="w-full py-2.5 bg-slate-950 border border-slate-850 group-hover:bg-blue-600 group-hover:border-blue-500 group-hover:text-white rounded-xl text-xs font-bold text-slate-400 hover:text-white transition-all flex items-center justify-center gap-1.5 cursor-pointer shadow-inner"
+                className="w-full py-2.5 bg-slate-950 border border-slate-850 group-hover:bg-blue-600 group-hover:border-blue-500 group-hover:text-white rounded-xl text-sm font-bold text-slate-300 hover:text-white transition-all flex items-center justify-center gap-1.5 cursor-pointer shadow-inner"
               >
                 Xem chi tiết lịch học
                 <ChevronRight className="w-3.5 h-3.5" />
@@ -224,11 +217,11 @@ export default function HomePortal({ onStartSurvey }: HomePortalProps) {
             <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-indigo-500 to-purple-500" />
             <div className="space-y-4">
               <div className="flex items-center justify-between">
-                <span className="px-3 py-1 bg-indigo-500/10 border border-indigo-500/20 text-indigo-400 rounded-full text-xs font-semibold uppercase tracking-wider">
+                <span className="px-3 py-1 bg-indigo-500/10 border border-indigo-500/20 text-indigo-400 rounded-full text-sm font-semibold uppercase tracking-wider">
                   Cấp Độ 2
                 </span>
-                <span className="text-xs text-slate-500 flex items-center gap-1 font-mono">
-                  <Clock className="w-3.5 h-3.5" /> 120 phút
+                <span className="text-sm text-slate-400 flex items-center gap-1 font-mono">
+                  <Clock className="w-4 h-4" /> 120 phút
                 </span>
               </div>
               <div>
@@ -236,16 +229,13 @@ export default function HomePortal({ onStartSurvey }: HomePortalProps) {
                   AI Automation
                   <ArrowUpRight className="w-4 h-4 text-slate-600 group-hover:text-indigo-400 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-all" />
                 </h3>
-                <p className="text-xs text-indigo-400 mt-0.5 font-semibold">Lớp Builders - Tự động hóa</p>
-                <p className="text-sm text-slate-400 mt-2.5 leading-relaxed font-sans font-light">
-                  Dành cho nhân sự CNTT, phòng ban kỹ thuật hoặc người muốn tối ưu hóa luồng công việc lặp đi lặp lại thông qua kỹ năng viết code Apps Script + AI.
-                </p>
+                <p className="text-sm text-indigo-400 mt-0.5 font-semibold">Lớp Builders - Tự động hóa</p>
               </div>
               <div className="pt-2 border-t border-slate-800 space-y-2">
-                <p className="text-xs font-bold text-slate-300">Bộ công cụ cốt lõi:</p>
+                <p className="text-sm font-bold text-slate-200">Bộ công cụ cốt lõi:</p>
                 <div className="flex flex-wrap gap-1.5">
                   {["Apps Script", "Gemini API", "Google Sheet", "Google Form", "AI Trả Phí"].map((tool) => (
-                    <span key={tool} className="text-[11px] px-2.5 py-1 bg-slate-950 text-slate-400 rounded-lg border border-slate-850 font-mono">
+                    <span key={tool} className="text-sm px-2.5 py-1 bg-slate-950 text-slate-300 rounded-lg border border-slate-850 font-mono">
                       {tool}
                     </span>
                   ))}
@@ -258,7 +248,7 @@ export default function HomePortal({ onStartSurvey }: HomePortalProps) {
                   setSelectedLevelTab("L2");
                   document.getElementById("agenda-tab")?.scrollIntoView({ behavior: "smooth" });
                 }}
-                className="w-full py-2.5 bg-slate-950 border border-slate-850 group-hover:bg-indigo-600 group-hover:border-indigo-500 group-hover:text-white rounded-xl text-xs font-bold text-slate-400 hover:text-white transition-all flex items-center justify-center gap-1.5 cursor-pointer shadow-inner"
+                className="w-full py-2.5 bg-slate-950 border border-slate-850 group-hover:bg-indigo-600 group-hover:border-indigo-500 group-hover:text-white rounded-xl text-sm font-bold text-slate-300 hover:text-white transition-all flex items-center justify-center gap-1.5 cursor-pointer shadow-inner"
               >
                 Xem chi tiết lịch học
                 <ChevronRight className="w-3.5 h-3.5" />
@@ -271,11 +261,11 @@ export default function HomePortal({ onStartSurvey }: HomePortalProps) {
             <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-purple-500 to-pink-500" />
             <div className="space-y-4">
               <div className="flex items-center justify-between">
-                <span className="px-3 py-1 bg-purple-500/10 border border-purple-500/20 text-purple-400 rounded-full text-xs font-semibold uppercase tracking-wider">
+                <span className="px-3 py-1 bg-purple-500/10 border border-purple-500/20 text-purple-400 rounded-full text-sm font-semibold uppercase tracking-wider">
                   Cấp Độ 3
                 </span>
-                <span className="text-xs text-slate-500 flex items-center gap-1 font-mono">
-                  <Clock className="w-3.5 h-3.5" /> 120 phút
+                <span className="text-sm text-slate-400 flex items-center gap-1 font-mono">
+                  <Clock className="w-4 h-4" /> 120 phút
                 </span>
               </div>
               <div>
@@ -283,16 +273,13 @@ export default function HomePortal({ onStartSurvey }: HomePortalProps) {
                   Vibe Coding
                   <ArrowUpRight className="w-4 h-4 text-slate-600 group-hover:text-purple-400 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-all" />
                 </h3>
-                <p className="text-xs text-purple-400 mt-0.5 font-semibold">Lớp Creators - Tạo ứng dụng</p>
-                <p className="text-sm text-slate-400 mt-2.5 leading-relaxed font-sans font-light">
-                  Dành cho nhân sự mong muốn tự thiết kế các ứng dụng web nhỏ phục vụ khoa phòng thông qua quy trình phát triển dựa hoàn toàn bằng Prompt-to-App.
-                </p>
+                <p className="text-sm text-purple-400 mt-0.5 font-semibold">Lớp Creators - Tạo ứng dụng</p>
               </div>
               <div className="pt-2 border-t border-slate-800 space-y-2">
-                <p className="text-xs font-bold text-slate-300">Bộ công cụ cốt lõi:</p>
+                <p className="text-sm font-bold text-slate-200">Bộ công cụ cốt lõi:</p>
                 <div className="flex flex-wrap gap-1.5">
                   {["Prompt-to-App", "LLM API/Local", "Web Deploy", "App Sharing", "DB Integration"].map((tool) => (
-                    <span key={tool} className="text-[11px] px-2.5 py-1 bg-slate-950 text-slate-400 rounded-lg border border-slate-850 font-mono">
+                    <span key={tool} className="text-sm px-2.5 py-1 bg-slate-950 text-slate-300 rounded-lg border border-slate-850 font-mono">
                       {tool}
                     </span>
                   ))}
@@ -305,7 +292,7 @@ export default function HomePortal({ onStartSurvey }: HomePortalProps) {
                   setSelectedLevelTab("L3");
                   document.getElementById("agenda-tab")?.scrollIntoView({ behavior: "smooth" });
                 }}
-                className="w-full py-2.5 bg-slate-950 border border-slate-850 group-hover:bg-purple-600 group-hover:border-purple-500 group-hover:text-white rounded-xl text-xs font-bold text-slate-400 hover:text-white transition-all flex items-center justify-center gap-1.5 cursor-pointer shadow-inner"
+                className="w-full py-2.5 bg-slate-950 border border-slate-850 group-hover:bg-purple-600 group-hover:border-purple-500 group-hover:text-white rounded-xl text-sm font-bold text-slate-300 hover:text-white transition-all flex items-center justify-center gap-1.5 cursor-pointer shadow-inner"
               >
                 Xem chi tiết lịch học
                 <ChevronRight className="w-3.5 h-3.5" />
@@ -320,18 +307,17 @@ export default function HomePortal({ onStartSurvey }: HomePortalProps) {
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
             <h3 className="text-lg font-bold text-white">Chi Tiết Lịch Trình Buổi Học</h3>
-            <p className="text-xs text-slate-400">Bấm chọn từng cấp độ bên dưới để xem khung giờ chi tiết và kết quả đầu ra mong đợi.</p>
+            <p className="text-sm text-slate-300">Bấm chọn từng cấp độ bên dưới để xem khung giờ chi tiết và kết quả đầu ra mong đợi.</p>
           </div>
           <div className="flex rounded-xl bg-slate-950 p-1 self-start sm:self-center border border-slate-800">
             {(["L1", "L2", "L3"] as const).map((lvl) => (
               <button
                 key={lvl}
                 onClick={() => setSelectedLevelTab(lvl)}
-                className={`px-4 py-2 text-xs font-bold rounded-lg transition-all cursor-pointer ${
-                  selectedLevelTab === lvl
-                    ? "bg-slate-900 text-blue-400 border border-slate-800 shadow-lg"
-                    : "text-slate-400 hover:text-white"
-                }`}
+                className={`px-4 py-2 text-sm font-bold rounded-lg transition-all cursor-pointer ${selectedLevelTab === lvl
+                  ? "bg-slate-900 text-blue-400 border border-slate-800 shadow-lg"
+                  : "text-slate-400 hover:text-white"
+                  }`}
               >
                 {lvl === "L1" ? "Level 1 (120p)" : lvl === "L2" ? "Level 2 (120p)" : "Level 3 (120p)"}
               </button>
@@ -342,48 +328,48 @@ export default function HomePortal({ onStartSurvey }: HomePortalProps) {
         <div className="overflow-x-auto border border-slate-800 rounded-2xl">
           <table className="w-full text-left border-collapse">
             <thead>
-              <tr className="bg-slate-950 text-[11px] font-bold text-slate-400 uppercase tracking-wider border-b border-slate-800">
+              <tr className="bg-slate-950 text-sm font-bold text-slate-300 uppercase tracking-wider border-b border-slate-800">
                 <th className="px-4 py-3.5 w-24">Thời gian</th>
                 <th className="px-4 py-3.5 w-32">Dạng bài</th>
                 <th className="px-6 py-3.5">Nội dung học tập</th>
                 <th className="px-6 py-3.5">Sản phẩm đầu ra mong đợi</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-800 text-sm">
+            <tbody className="divide-y divide-slate-800 text-base">
               {selectedLevelTab === "L1" && timetableL1.map((row, idx) => (
                 <tr key={idx} className="hover:bg-slate-850/40 transition-colors">
                   <td className="px-4 py-4 font-mono font-bold text-blue-400 whitespace-nowrap">{row.time}</td>
                   <td className="px-4 py-4">
-                    <span className="inline-flex items-center px-2 py-0.5 rounded bg-blue-500/10 border border-blue-500/20 text-blue-300 text-xs font-semibold">
+                    <span className="inline-flex items-center px-2.5 py-1 rounded bg-blue-500/10 border border-blue-500/20 text-blue-300 text-sm font-semibold">
                       {row.type}
                     </span>
                   </td>
                   <td className="px-6 py-4 text-slate-300 leading-relaxed font-sans">{row.content}</td>
-                  <td className="px-6 py-4 text-slate-400 font-sans italic font-light">{row.output}</td>
+                  <td className="px-6 py-4 text-slate-300 font-sans italic">{row.output}</td>
                 </tr>
               ))}
               {selectedLevelTab === "L2" && timetableL2.map((row, idx) => (
                 <tr key={idx} className="hover:bg-slate-850/40 transition-colors">
                   <td className="px-4 py-4 font-mono font-bold text-indigo-400 whitespace-nowrap">{row.time}</td>
                   <td className="px-4 py-4">
-                    <span className="inline-flex items-center px-2 py-0.5 rounded bg-indigo-500/10 border border-indigo-500/20 text-indigo-300 text-xs font-semibold">
+                    <span className="inline-flex items-center px-2.5 py-1 rounded bg-indigo-500/10 border border-indigo-500/20 text-indigo-300 text-sm font-semibold">
                       {row.type}
                     </span>
                   </td>
                   <td className="px-6 py-4 text-slate-300 leading-relaxed font-sans">{row.content}</td>
-                  <td className="px-6 py-4 text-slate-400 font-sans italic font-light">{row.output}</td>
+                  <td className="px-6 py-4 text-slate-300 font-sans italic">{row.output}</td>
                 </tr>
               ))}
               {selectedLevelTab === "L3" && timetableL3.map((row, idx) => (
                 <tr key={idx} className="hover:bg-slate-850/40 transition-colors">
                   <td className="px-4 py-4 font-mono font-bold text-purple-400 whitespace-nowrap">{row.time}</td>
                   <td className="px-4 py-4">
-                    <span className="inline-flex items-center px-2 py-0.5 rounded bg-purple-500/10 border border-purple-500/20 text-purple-300 text-xs font-semibold">
+                    <span className="inline-flex items-center px-2.5 py-1 rounded bg-purple-500/10 border border-purple-500/20 text-purple-300 text-sm font-semibold">
                       {row.type}
                     </span>
                   </td>
                   <td className="px-6 py-4 text-slate-300 leading-relaxed font-sans">{row.content}</td>
-                  <td className="px-6 py-4 text-slate-400 font-sans italic font-light">{row.output}</td>
+                  <td className="px-6 py-4 text-slate-300 font-sans italic">{row.output}</td>
                 </tr>
               ))}
             </tbody>
