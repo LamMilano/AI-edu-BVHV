@@ -5,6 +5,7 @@ import {defineConfig} from 'vite';
 
 export default defineConfig(() => {
   return {
+    base: '/AI-edu-BVHV/',
     plugins: [react(), tailwindcss()],
     resolve: {
       alias: {
