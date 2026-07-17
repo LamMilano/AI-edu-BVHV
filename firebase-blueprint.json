@@ -1,0 +1,44 @@
+{
+  "collections": {
+    "survey_submissions": {
+      "description": "Saves student placement survey submissions and their calculated levels",
+      "fields": {
+        "id": { "type": "string", "description": "Unique submission ID" },
+        "studentName": { "type": "string", "description": "Student's full name" },
+        "department": { "type": "string", "description": "Hospital department/division" },
+        "email": { "type": "string", "description": "Student email address" },
+        "phone": { "type": "string", "description": "Zalo/Phone number" },
+        "score": { "type": "number", "description": "Placement test score out of 100" },
+        "assignedLevel": { "type": "string", "description": "Recommended level: L1, L2, L3" },
+        "answers": {
+          "type": "map",
+          "description": "User answers for questions 1 to 12"
+        },
+        "submittedAt": { "type": "timestamp", "description": "Time of submission" }
+      }
+    },
+    "announcements": {
+      "description": "Class notices and news posted by admins",
+      "fields": {
+        "id": { "type": "string", "description": "Unique announcement ID" },
+        "title": { "type": "string", "description": "Title of the notice" },
+        "content": { "type": "string", "description": "Notice content body" },
+        "category": { "type": "string", "description": "Notice category (important, schedule, general)" },
+        "date": { "type": "string", "description": "Formatted display date" },
+        "createdAt": { "type": "timestamp", "description": "Timestamp of creation" }
+      }
+    },
+    "classes": {
+      "description": "Active class sessions and schedules for level groups",
+      "fields": {
+        "id": { "type": "string", "description": "Unique class ID" },
+        "level": { "type": "string", "description": "Class level (L1, L2, L3)" },
+        "name": { "type": "string", "description": "Class designation name" },
+        "schedule": { "type": "string", "description": "Date, day and time details" },
+        "instructor": { "type": "string", "description": "Instructor name" },
+        "room": { "type": "string", "description": "Classroom details" },
+        "studentsCount": { "type": "number", "description": "Number of enrolled students" }
+      }
+    }
+  }
+}

@@ -1,0 +1,6 @@
+{
+  "name": "Cổng Quản Lý & Đào Tạo AI",
+  "description": "Hệ thống truyền thông, khảo sát phân loại học viên và quản lý lớp học cho chương trình đào tạo AI nội bộ.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
