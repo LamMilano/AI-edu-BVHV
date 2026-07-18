@@ -1,15 +1,15 @@
 import React, { useState, useEffect } from "react";
-import { 
-  collection, getDocs, addDoc, deleteDoc, doc, serverTimestamp 
+import {
+  collection, getDocs, addDoc, updateDoc, deleteDoc, doc, serverTimestamp
 } from "firebase/firestore";
 import { db } from "../lib/firebase";
 import { SurveySubmission, Announcement, ClassSession } from "../types";
-import { 
-  ResponsiveContainer, PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, Tooltip, Legend 
+import {
+  ResponsiveContainer, PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, Tooltip, Legend
 } from "recharts";
-import { 
-  LayoutDashboard, Users, FileText, Calendar, BellRing, Plus, 
-  Trash2, Search, ArrowUpDown, ChevronDown, CheckCircle2, ShieldAlert, Sparkles, BookOpen 
+import {
+  LayoutDashboard, Users, FileText, Calendar, BellRing, Plus,
+  Trash2, Pencil, X, Search, ArrowUpDown, ChevronDown, CheckCircle2, ShieldAlert, Sparkles, BookOpen
 } from "lucide-react";
 
 interface AdminDashboardProps {
@@ -23,7 +23,7 @@ export default function AdminDashboard({ submissions, announcements, classes, on
   // Navigation tabs within Admin Panel
   const [adminSubTab, setAdminSubTab] = useState<"students" | "classes" | "announcements">("students");
 
-  // State for creating new Class
+  // State for creating / editing a Class
   const [newClass, setNewClass] = useState({
     level: "L1" as "L1" | "L2" | "L3",
     name: "",
@@ -32,6 +32,8 @@ export default function AdminDashboard({ submissions, announcements, classes, on
     room: "",
     studentsCount: 0
   });
+  // ID lớp đang sửa; null nghĩa là đang ở chế độ Thêm mới.
+  const [editingClassId, setEditingClassId] = useState<string | null>(null);
 
   // State for creating new Announcement
   const [newAnn, setNewAnn] = useState({
@@ -87,8 +89,37 @@ export default function AdminDashboard({ submissions, announcements, classes, on
     "Học viên": dayPrefs[key]
   }));
 
-  // Handle adding new class
-  const handleCreateClass = async (e: React.FormEvent) => {
+  // Đưa form về trạng thái trống (chế độ Thêm mới)
+  const resetClassForm = () => {
+    setEditingClassId(null);
+    setNewClass({
+      level: "L1",
+      name: "",
+      schedule: "",
+      instructor: "",
+      room: "",
+      studentsCount: 0
+    });
+  };
+
+  // Bắt đầu sửa một lớp: đổ dữ liệu vào form
+  const handleEditClass = (cls: ClassSession) => {
+    if (!cls.id) return;
+    setEditingClassId(cls.id);
+    setNewClass({
+      level: cls.level,
+      name: cls.name,
+      schedule: cls.schedule,
+      instructor: cls.instructor,
+      room: cls.room,
+      studentsCount: cls.studentsCount
+    });
+    // Cuộn lên đầu để thấy form (trên mobile form nằm dưới danh sách).
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  };
+
+  // Lưu lớp học: thêm mới hoặc cập nhật tùy theo editingClassId
+  const handleSaveClass = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newClass.name || !newClass.schedule) {
       alert("Vui lòng nhập tên lớp và lịch học!");
@@ -96,18 +127,16 @@ export default function AdminDashboard({ submissions, announcements, classes, on
     }
     setLoading(true);
     try {
-      await addDoc(collection(db, "classes"), newClass);
-      setNewClass({
-        level: "L1",
-        name: "",
-        schedule: "",
-        instructor: "",
-        room: "",
-        studentsCount: 0
-      });
+      if (editingClassId) {
+        await updateDoc(doc(db, "classes", editingClassId), newClass);
+      } else {
+        await addDoc(collection(db, "classes"), newClass);
+      }
+      resetClassForm();
       onRefreshData();
     } catch (err) {
-      console.error("Lỗi khi thêm lớp học: ", err);
+      console.error("Lỗi khi lưu lớp học: ", err);
+      alert("Có lỗi khi lưu lớp học. Vui lòng thử lại.");
     } finally {
       setLoading(false);
     }
@@ -477,8 +506,10 @@ export default function AdminDashboard({ submissions, announcements, classes, on
             
             <div className="grid sm:grid-cols-2 gap-4">
               {classes.map((cls) => (
-                <div key={cls.id} className="bg-white p-5 rounded-2xl border border-slate-100 shadow-xs space-y-3 hover:border-slate-200 transition-all relative">
-                  <div className="flex items-center justify-between">
+                <div key={cls.id} className={`bg-white p-5 rounded-2xl border shadow-xs space-y-3 transition-all relative ${
+                  editingClassId === cls.id ? "border-blue-400 ring-2 ring-blue-100" : "border-slate-100 hover:border-slate-200"
+                }`}>
+                  <div className="flex items-center justify-between pr-14">
                     <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${
                       cls.level === "L3"
                         ? "bg-purple-100 text-purple-700"
@@ -501,26 +532,55 @@ export default function AdminDashboard({ submissions, announcements, classes, on
                     <p><b>Địa điểm:</b> {cls.room}</p>
                   </div>
 
-                  <button
-                    id={`delete-class-${cls.id}`}
-                    onClick={() => handleDeleteDoc("classes", cls.id)}
-                    className="absolute top-4 right-4 text-slate-300 hover:text-red-500 transition-colors p-1 rounded-md"
-                  >
-                    <Trash2 className="w-4 h-4" />
-                  </button>
+                  <div className="absolute top-4 right-4 flex items-center gap-1">
+                    <button
+                      id={`edit-class-${cls.id}`}
+                      onClick={() => handleEditClass(cls)}
+                      title="Sửa lớp học"
+                      className="text-slate-300 hover:text-blue-600 transition-colors p-1 rounded-md cursor-pointer"
+                    >
+                      <Pencil className="w-4 h-4" />
+                    </button>
+                    <button
+                      id={`delete-class-${cls.id}`}
+                      onClick={() => handleDeleteDoc("classes", cls.id)}
+                      title="Xóa lớp học"
+                      className="text-slate-300 hover:text-red-500 transition-colors p-1 rounded-md cursor-pointer"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  </div>
                 </div>
               ))}
             </div>
           </div>
 
-          {/* Form Create Class */}
-          <div className="bg-white p-5 rounded-2xl border border-slate-100 shadow-xs self-start">
-            <h3 className="text-sm font-bold text-slate-800 uppercase tracking-wider mb-4 flex items-center gap-1.5">
-              <Plus className="w-4 h-4 text-blue-600" />
-              Thêm Lớp Học Mới
-            </h3>
+          {/* Form Create / Edit Class */}
+          <div className={`bg-white p-5 rounded-2xl border shadow-xs self-start ${
+            editingClassId ? "border-blue-300" : "border-slate-100"
+          }`}>
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-sm font-bold text-slate-800 uppercase tracking-wider flex items-center gap-1.5">
+                {editingClassId ? (
+                  <><Pencil className="w-4 h-4 text-blue-600" /> Sửa Lớp Học</>
+                ) : (
+                  <><Plus className="w-4 h-4 text-blue-600" /> Thêm Lớp Học Mới</>
+                )}
+              </h3>
+              {editingClassId && (
+                <button
+                  id="btn-cancel-edit-class"
+                  type="button"
+                  onClick={resetClassForm}
+                  title="Hủy sửa"
+                  className="flex items-center gap-1 text-[11px] font-semibold text-slate-500 hover:text-slate-800 transition-colors cursor-pointer"
+                >
+                  <X className="w-3.5 h-3.5" /> Hủy
+                </button>
+              )}
+            </div>
 
-            <form onSubmit={handleCreateClass} className="space-y-4 text-xs">
+            <form onSubmit={handleSaveClass} className="space-y-4 text-xs">
               <div className="space-y-1">
                 <label className="font-bold text-slate-700">Cấp độ đào tạo</label>
                 <select
@@ -600,7 +660,7 @@ export default function AdminDashboard({ submissions, announcements, classes, on
                 disabled={loading}
                 className="w-full py-2.5 bg-blue-600 hover:bg-blue-500 text-white font-bold rounded-lg transition-all cursor-pointer disabled:opacity-50"
               >
-                {loading ? "Đang xử lý..." : "Lưu Lớp Học"}
+                {loading ? "Đang xử lý..." : editingClassId ? "Cập Nhật Lớp Học" : "Lưu Lớp Học"}
               </button>
             </form>
           </div>
