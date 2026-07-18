@@ -6,10 +6,10 @@ interface NavigationProps {
   activeTab: "home" | "survey" | "admin";
   setActiveTab: (tab: "home" | "survey" | "admin") => void;
   isAdmin: boolean;
-  setIsAdmin: (isAdmin: boolean) => void;
+  onLogout: () => void;
 }
 
-export default function Navigation({ activeTab, setActiveTab, isAdmin, setIsAdmin }: NavigationProps) {
+export default function Navigation({ activeTab, setActiveTab, isAdmin, onLogout }: NavigationProps) {
   const [isOpen, setIsOpen] = useState(false);
 
   return (
@@ -66,14 +66,17 @@ export default function Navigation({ activeTab, setActiveTab, isAdmin, setIsAdmi
 
             <div className="h-5 w-[1px] bg-slate-800 mx-2" />
 
-            {/* Quick Admin Override for testing */}
+            {/* Quyền Giảng viên: TẮT = mở form đăng nhập; BẬT = đăng xuất */}
             <button
               id="nav-toggle-role"
               onClick={() => {
-                const newVal = !isAdmin;
-                setIsAdmin(newVal);
-                if (newVal) setActiveTab("admin");
+                if (isAdmin) {
+                  onLogout();
+                } else {
+                  setActiveTab("admin");
+                }
               }}
+              title={isAdmin ? "Đăng xuất khỏi quyền giảng viên" : "Đăng nhập quyền giảng viên"}
               className="flex items-center gap-2 px-3 py-1.5 rounded-xl border border-slate-800 bg-slate-900/50 hover:border-slate-700 transition-all text-xs text-slate-400 cursor-pointer"
             >
               <span className="font-mono">Quyền GV:</span>
@@ -162,9 +165,12 @@ export default function Navigation({ activeTab, setActiveTab, isAdmin, setIsAdmi
             <button
               id="nav-mobile-toggle-role"
               onClick={() => {
-                setIsAdmin(!isAdmin);
+                if (isAdmin) {
+                  onLogout();
+                } else {
+                  setActiveTab("admin");
+                }
                 setIsOpen(false);
-                if (!isAdmin) setActiveTab("admin");
               }}
               className="flex items-center gap-1.5"
             >

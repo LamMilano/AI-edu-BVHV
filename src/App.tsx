@@ -7,12 +7,15 @@ import Navigation from "./components/Navigation";
 import HomePortal from "./components/HomePortal";
 import SurveyForm from "./components/SurveyForm";
 import AdminDashboard from "./components/AdminDashboard";
+import TeacherLogin from "./components/TeacherLogin";
+import { isTeacherAuthed, clearTeacherAuth } from "./lib/auth";
 import { CheckCircle2, Award, ArrowRight, GraduationCap, Calendar, Sparkles } from "lucide-react";
 import HungVuongLogo from "./components/HungVuongLogo";
 
 export default function App() {
   const [activeTab, setActiveTab] = useState<"home" | "survey" | "admin">("home");
-  const [isAdmin, setIsAdmin] = useState(false);
+  // Quyền Giảng viên: khôi phục từ localStorage để ghi nhớ đăng nhập.
+  const [isAdmin, setIsAdmin] = useState(() => isTeacherAuthed());
   
   // Data State
   const [submissions, setSubmissions] = useState<SurveySubmission[]>([]);
@@ -103,6 +106,19 @@ export default function App() {
     }, 500);
   };
 
+  // Đăng nhập giảng viên thành công (gọi từ TeacherLogin).
+  const handleLoginSuccess = () => {
+    setIsAdmin(true);
+    setActiveTab("admin");
+  };
+
+  // Đăng xuất khỏi quyền giảng viên.
+  const handleLogout = () => {
+    clearTeacherAuth();
+    setIsAdmin(false);
+    setActiveTab("home");
+  };
+
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col font-sans">
       {/* Navigation Bar */}
@@ -110,7 +126,7 @@ export default function App() {
         activeTab={activeTab}
         setActiveTab={setActiveTab}
         isAdmin={isAdmin}
-        setIsAdmin={setIsAdmin}
+        onLogout={handleLogout}
       />
 
       {/* Main Container */}
@@ -135,12 +151,16 @@ export default function App() {
             )}
 
             {activeTab === "admin" && (
-              <AdminDashboard
-                submissions={submissions}
-                announcements={announcements}
-                classes={classes}
-                onRefreshData={loadFirestoreData}
-              />
+              isAdmin ? (
+                <AdminDashboard
+                  submissions={submissions}
+                  announcements={announcements}
+                  classes={classes}
+                  onRefreshData={loadFirestoreData}
+                />
+              ) : (
+                <TeacherLogin onSuccess={handleLoginSuccess} />
+              )
             )}
           </div>
         )}
