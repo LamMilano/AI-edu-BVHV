@@ -180,7 +180,11 @@ export default function App() {
               <HungVuongLogo size="sm" showSlogan variant="compact" />
             </div>
             <div className="flex flex-col sm:items-end gap-1.5 text-[12.5px] text-ink-3">
-              <span>© 2026 Bệnh viện Đa khoa Hùng Vương · Đào tạo AI nội bộ</span>
+              <span>© 2026 Bệnh viện Đa khoa Hùng Vương</span>
+              {/* Ghi công tác giả — nhẹ hơn một bậc so với dòng bản quyền phía trên */}
+              <span className="text-[11.5px] text-ink-4">
+                Designed &amp; developed by Nguyen Thanh Lam
+              </span>
             </div>
           </div>
         </footer>
