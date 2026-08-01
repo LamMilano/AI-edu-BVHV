@@ -88,7 +88,7 @@ const PRINCIPLES = [
   {
     icon: Zap,
     grad: "from-ok-light to-ok",
-    title: "30% lý thuyết · 70% làm",
+    title: "30% lý thuyết · 70% thực hành",
     desc: "Mỗi phần đều kết thúc bằng một sản phẩm bạn mang về dùng được ngay.",
   },
 ];
@@ -111,7 +111,7 @@ export default function HomePortal({ onStartSurvey }: HomePortalProps) {
         </span>
 
         <h1 className="mt-5 text-4xl sm:text-5xl lg:text-[52px] font-extrabold tracking-[-0.035em] leading-[1.06]">
-          Đào tạo <span className="text-grad">AI trong Y tế</span>
+          Đào tạo & chia sẻ <span className="text-grad">AI nội bộ</span>
         </h1>
 
         <p className="mt-4 max-w-xl text-[16px] sm:text-[16.5px] leading-relaxed text-ink-3">
@@ -125,7 +125,7 @@ export default function HomePortal({ onStartSurvey }: HomePortalProps) {
             onClick={onStartSurvey}
             className="btn-primary px-6 py-3.5 text-[15px] flex items-center justify-center gap-2.5 cursor-pointer group"
           >
-            Làm khảo sát xếp lớp
+            Đăng ký tham gia
             <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
           </button>
           <a
@@ -139,7 +139,7 @@ export default function HomePortal({ onStartSurvey }: HomePortalProps) {
         {/* Ba con số thật — thay cho widget trạng thái hệ thống hiển thị dữ liệu cứng */}
         <div className="mt-11 surface grid grid-cols-1 sm:grid-cols-3 overflow-hidden">
           {[
-            { n: "03", unit: "", l: "cấp độ, từ dùng AI hằng ngày đến tự dựng ứng dụng" },
+            { n: "03", unit: "", l: "cấp độ, từ dùng AI hằng ngày đến xây dựng ứng dụng" },
             { n: "120", unit: " phút", l: "mỗi buổi, học trên máy tính cá nhân" },
             { n: "70", unit: "%", l: "thời lượng là thực hành trên việc thật của khoa bạn" },
           ].map((f, i) => (

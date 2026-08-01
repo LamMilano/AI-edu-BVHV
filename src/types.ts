@@ -7,13 +7,14 @@ export interface SurveySubmission {
   score: number;
   assignedLevel: "L1" | "L2" | "L3";
   answers: {
-    // Q1-Q6: Part B (Placement & experience)
+    // Q1-Q5: Part B (Placement & experience)
     q1_tools: string[]; // ['ChatGPT', 'Gemini', etc]
+    q1_tools_other?: string; // free text when 'Khác' is picked
     q2_paid: string[]; // ['ChatGPT', 'Gemini', etc]
+    q2_paid_other?: string; // free text when 'Khác' is picked
     q3_frequency: string; // 'Chưa bao giờ' | 'Thỉnh thoảng' | 'Hàng tuần' | 'Hàng ngày'
     q4_past_tasks: string[]; // list of past accomplishments
     q5_concepts: string[]; // list of known terms
-    q6_coding_exp: string; // 'Không có' | 'Biết cơ bản' | 'Thành thạo >= 1 ngôn ngữ'
     // Q7-Q9: Part C (Expectations)
     q7_goals: string[]; // desired levels
     q8_orientation: string; // learning path direction

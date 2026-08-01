@@ -46,7 +46,7 @@ export default function HungVuongLogo({
 
         {variant === "default" && (
           <span className="text-[10.5px] text-ink-4 mt-0.5">
-            Đào tạo AI nội bộ
+            Phòng Kế hoạch tổng hợp
           </span>
         )}
 

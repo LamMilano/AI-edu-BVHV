@@ -545,11 +545,29 @@ export default function AdminDashboard({ submissions, announcements, classes, on
               <div className="pt-4 border-t border-line-soft grid sm:grid-cols-2 gap-5">
                 <div>
                   <span className="text-[10.5px] font-extrabold text-ink-4 uppercase tracking-[0.09em] block mb-1.5">Công cụ đã dùng</span>
-                  <p className="text-[13.5px] text-ink-2">{(selectedSubmission.answers.q1_tools || []).join(", ") || "Chưa dùng bao giờ"}</p>
+                  <p className="text-[13.5px] text-ink-2">
+                    {[
+                      ...(selectedSubmission.answers.q1_tools || []),
+                      selectedSubmission.answers.q1_tools_other,
+                    ].filter(Boolean).join(", ") || "Chưa dùng bao giờ"}
+                  </p>
+                </div>
+                <div>
+                  <span className="text-[10.5px] font-extrabold text-ink-4 uppercase tracking-[0.09em] block mb-1.5">Bản trả phí đang dùng</span>
+                  <p className="text-[13.5px] text-ink-2">
+                    {[
+                      ...(selectedSubmission.answers.q2_paid || []),
+                      selectedSubmission.answers.q2_paid_other,
+                    ].filter(Boolean).join(", ") || "Chưa trả phí cho công cụ nào"}
+                  </p>
                 </div>
                 <div>
                   <span className="text-[10.5px] font-extrabold text-ink-4 uppercase tracking-[0.09em] block mb-1.5">Khái niệm đã biết</span>
                   <p className="text-[13.5px] text-ink-2">{(selectedSubmission.answers.q5_concepts || []).join(", ") || "Chưa biết khái niệm nào"}</p>
+                </div>
+                <div>
+                  <span className="text-[10.5px] font-extrabold text-ink-4 uppercase tracking-[0.09em] block mb-1.5">Việc đã từng làm bằng AI</span>
+                  <p className="text-[13.5px] text-ink-2">{(selectedSubmission.answers.q4_past_tasks || []).join(", ") || "Chưa làm việc nào"}</p>
                 </div>
               </div>
             </div>

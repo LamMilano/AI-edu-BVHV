@@ -179,9 +179,6 @@ export default function App() {
             </div>
             <div className="flex flex-col sm:items-end gap-1.5 text-[12.5px] text-ink-3">
               <span>© 2026 Bệnh viện Đa khoa Hùng Vương · Đào tạo AI nội bộ</span>
-              <span className="text-brand-navy font-semibold">
-                Không đưa thông tin định danh người bệnh vào công cụ AI
-              </span>
             </div>
           </div>
         </footer>

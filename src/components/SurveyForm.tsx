@@ -39,6 +39,18 @@ const LEVEL_META = {
   },
 } as const;
 
+/** Các câu hỏi cho chọn nhiều đáp án. */
+type MultiField =
+  | "q1_tools" | "q2_paid" | "q4_past_tasks" | "q5_concepts"
+  | "q7_goals" | "q10_timeframe" | "q11_days";
+
+/** Đáp án "phủ định" của từng câu: chọn nó thì bỏ hết đáp án còn lại. */
+const NONE_OPTION: Partial<Record<MultiField, string>> = {
+  q1_tools: "Chưa dùng bao giờ",
+  q2_paid: "Chưa trả phí cho công cụ nào",
+  q5_concepts: "Không hiểu",
+};
+
 /* ── Mảnh giao diện dùng lại ──────────────────────────────────
    Định nghĩa ở cấp module, KHÔNG lồng trong SurveyForm: nếu lồng,
    mỗi lần render React thấy một kiểu component mới, tháo bỏ DOM cũ
@@ -121,6 +133,25 @@ function SingleChoice({ opts, selected, onPick, cols, idPrefix }: {
   );
 }
 
+/** Ô ghi rõ nội dung cho lựa chọn "Khác", chỉ hiện khi "Khác" được chọn. */
+function OtherInput({ id, name, show, value, onChange }: {
+  id: string; name: string; show: boolean; value: string;
+  onChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
+}) {
+  if (!show) return null;
+  return (
+    <input
+      id={id}
+      name={name}
+      value={value}
+      onChange={onChange}
+      placeholder="Khác — vui lòng ghi rõ tên công cụ…"
+      aria-label="Ghi rõ công cụ khác"
+      className="field w-full mt-2 px-3.5 py-2.5 text-[13.5px]"
+    />
+  );
+}
+
 function TextField({ id, name, label, placeholder, Icon, type = "text", value, error, onChange }: {
   id: string; name: string; label: string; placeholder: string; Icon: any; type?: string;
   value: string; error?: string;
@@ -167,11 +198,12 @@ export default function SurveyForm({ onSuccess }: SurveyFormProps) {
     email: "",
     phone: "",
     q1_tools: [] as string[],
+    q1_tools_other: "",
     q2_paid: [] as string[],
+    q2_paid_other: "",
     q3_frequency: "Chưa bao giờ",
     q4_past_tasks: [] as string[],
     q5_concepts: [] as string[],
-    q6_coding_exp: "Không có",
     q7_goals: [] as string[],
     q8_orientation: "Chỉ cần AI hỗ trợ công việc",
     q9_repetitive_tasks: "",
@@ -182,10 +214,11 @@ export default function SurveyForm({ onSuccess }: SurveyFormProps) {
 
   const [errors, setErrors] = useState<Record<string, string>>({});
 
-  const toolOptions = ["ChatGPT", "Gemini", "Copilot", "NotebookLM", "Chưa dùng bao giờ", "Khác"];
-  const paidOptions = ["Chưa trả phí cho công cụ nào", "ChatGPT Plus", "Gemini Advanced", "Copilot Pro", "Khác"];
+  const toolOptions = ["Chưa dùng bao giờ", "ChatGPT", "Gemini", "Copilot", "NotebookLM", "Khác"];
+  const paidOptions = ["Chưa trả phí cho công cụ nào", "ChatGPT", "Gemini", "Copilot", "NotebookLM", "Khác"];
   const frequencyOptions = ["Chưa bao giờ", "Thỉnh thoảng", "Hàng tuần", "Hàng ngày"];
   const pastTaskOptions = [
+    "Hỏi đáp thông thường",
     "Viết prompt có cấu trúc",
     "Tạo GPT/Gem riêng",
     "Dùng NotebookLM có trích dẫn",
@@ -193,8 +226,7 @@ export default function SurveyForm({ onSuccess }: SurveyFormProps) {
     "Viết code hoặc Apps Script",
     "Xây app/tool nhỏ"
   ];
-  const conceptOptions = ["LLM", "Token", "Context window", "Hallucination", "Prompt", "Agent"];
-  const codingExpOptions = ["Không có", "Biết cơ bản (đọc/sửa code)", "Thành thạo >= 1 ngôn ngữ"];
+  const conceptOptions = ["Không hiểu", "LLM", "Token", "Context window", "Hallucination", "Prompt", "Agent"];
   const goalOptions = [
     "Dùng AI cho công việc hàng ngày (L1)",
     "Tự động hóa quy trình lặp (L2)",
@@ -216,26 +248,39 @@ export default function SurveyForm({ onSuccess }: SurveyFormProps) {
     }
   };
 
-  const handleCheckboxChange = (name: "q1_tools" | "q2_paid" | "q4_past_tasks" | "q5_concepts" | "q7_goals" | "q10_timeframe" | "q11_days", option: string) => {
+  const handleCheckboxChange = (name: MultiField, option: string) => {
     setFormData(prev => {
       const current = prev[name] as string[];
+      const none = NONE_OPTION[name];
       let updated: string[];
 
-      if (option === "Chưa dùng bao giờ" && name === "q1_tools") {
-        updated = ["Chưa dùng bao giờ"];
-      } else if (option === "Chưa trả phí cho công cụ nào" && name === "q2_paid") {
-        updated = ["Chưa trả phí cho công cụ nào"];
+      if (option === none) {
+        // "Không có / chưa dùng" loại trừ mọi lựa chọn khác
+        updated = [option];
       } else {
-        let temp = current.filter(item => item !== "Chưa dùng bao giờ" && item !== "Chưa trả phí cho công cụ nào");
-        if (temp.includes(option)) {
-          updated = temp.filter(item => item !== option);
-        } else {
-          updated = [...temp, option];
-        }
+        const temp = none ? current.filter(item => item !== none) : current;
+        updated = temp.includes(option)
+          ? temp.filter(item => item !== option)
+          : [...temp, option];
       }
 
-      return { ...prev, [name]: updated };
+      const next = { ...prev, [name]: updated };
+      // Bỏ chọn "Khác" thì xoá luôn nội dung đã ghi kèm
+      if (name === "q1_tools" && !updated.includes("Khác")) next.q1_tools_other = "";
+      if (name === "q2_paid" && !updated.includes("Khác")) next.q2_paid_other = "";
+      return next;
     });
+  };
+
+  /** Điểm cho từng việc đã từng làm ở câu 4 — càng tự chủ càng cao. */
+  const TASK_POINTS: Record<string, number> = {
+    "Hỏi đáp thông thường": 1,
+    "Viết prompt có cấu trúc": 4,
+    "Tạo GPT/Gem riêng": 6,
+    "Dùng NotebookLM có trích dẫn": 5,
+    "Dùng AI trong Office (Word/Excel/PowerPoint)": 5,
+    "Viết code hoặc Apps Script": 10,
+    "Xây app/tool nhỏ": 12,
   };
 
   // Tính điểm và xếp lớp
@@ -255,31 +300,30 @@ export default function SurveyForm({ onSuccess }: SurveyFormProps) {
     else if (formData.q3_frequency === "Hàng ngày") score += 15;
 
     formData.q4_past_tasks.forEach(task => {
-      if (task === "Viết prompt có cấu trúc") score += 4;
-      if (task === "Tạo GPT/Gem riêng") score += 4;
-      if (task === "Dùng NotebookLM có trích dẫn") score += 4;
-      if (task === "Dùng AI trong Office (Word/Excel/PowerPoint)") score += 4;
-      if (task === "Viết code hoặc Apps Script") score += 6;
-      if (task === "Xây app/tool nhỏ") score += 8;
+      score += TASK_POINTS[task] ?? 0;
     });
 
-    score += formData.q5_concepts.length * 2.5;
-
-    if (formData.q6_coding_exp === "Biết cơ bản (đọc/sửa code)") score += 8;
-    else if (formData.q6_coding_exp === "Thành thạo >= 1 ngôn ngữ") score += 15;
+    if (!formData.q5_concepts.includes("Không hiểu")) {
+      score += formData.q5_concepts.length * 2.5;
+    }
 
     const finalScore = Math.min(Math.round(score), 100);
 
     let assignedLevel: "L1" | "L2" | "L3" = "L1";
 
+    // Đã tự viết code / dựng tool là tín hiệu đủ mạnh để vào L3 dù điểm thấp.
     const hasCodingOrAutomation =
       formData.q4_past_tasks.includes("Viết code hoặc Apps Script") ||
-      formData.q4_past_tasks.includes("Xây app/tool nhỏ") ||
-      formData.q6_coding_exp === "Thành thạo >= 1 ngôn ngữ";
+      formData.q4_past_tasks.includes("Xây app/tool nhỏ");
+
+    // "Hỏi đáp thông thường" là mức khởi đầu, không tính là kinh nghiệm nâng cao.
+    const hasAdvancedTask = formData.q4_past_tasks.some(
+      task => task !== "Hỏi đáp thông thường"
+    );
 
     if (hasCodingOrAutomation || finalScore >= 45) {
       assignedLevel = "L3";
-    } else if (finalScore >= 18 || formData.q4_past_tasks.length > 0 || formData.q6_coding_exp.includes("Biết cơ bản")) {
+    } else if (finalScore >= 18 || hasAdvancedTask) {
       assignedLevel = "L2";
     } else {
       assignedLevel = "L1";
@@ -322,9 +366,8 @@ export default function SurveyForm({ onSuccess }: SurveyFormProps) {
         Boolean(formData.q3_frequency),
         formData.q4_past_tasks.length > 0,
         formData.q5_concepts.length > 0,
-        Boolean(formData.q6_coding_exp),
       ];
-      return { done: answers.filter(Boolean).length, total: 6 };
+      return { done: answers.filter(Boolean).length, total: 5 };
     }
     if (step === 3) {
       const answers = [
@@ -374,11 +417,12 @@ export default function SurveyForm({ onSuccess }: SurveyFormProps) {
         assignedLevel: submittedResult.assignedLevel,
         answers: {
           q1_tools: formData.q1_tools,
+          q1_tools_other: formData.q1_tools_other.trim(),
           q2_paid: formData.q2_paid,
+          q2_paid_other: formData.q2_paid_other.trim(),
           q3_frequency: formData.q3_frequency,
           q4_past_tasks: formData.q4_past_tasks,
           q5_concepts: formData.q5_concepts,
-          q6_coding_exp: formData.q6_coding_exp,
           q7_goals: formData.q7_goals,
           q8_orientation: formData.q8_orientation,
           q9_repetitive_tasks: formData.q9_repetitive_tasks,
@@ -479,28 +523,38 @@ export default function SurveyForm({ onSuccess }: SurveyFormProps) {
               </p>
             </div>
 
-            <Question n={1} title="Bạn đã dùng công cụ AI nào?" hint="chọn nhiều">
+            <Question n={1} title="Bạn đã sử dụng công cụ AI nào?" hint="chọn nhiều">
               <MultiChoice idPrefix="q1" opts={toolOptions} selected={formData.q1_tools} cols="grid-cols-1 sm:grid-cols-3" onPick={(o) => handleCheckboxChange("q1_tools", o)} />
+              <OtherInput
+                id="input-q1-other"
+                name="q1_tools_other"
+                show={formData.q1_tools.includes("Khác")}
+                value={formData.q1_tools_other}
+                onChange={handleChange}
+              />
             </Question>
 
-            <Question n={2} title="Bạn đang dùng bản có trả phí của công cụ nào?" hint="chọn nhiều">
+            <Question n={2} title="Bạn đang sử dụng bản CÓ TRẢ PHÍ của công cụ AI nào?" hint="chọn nhiều">
               <MultiChoice idPrefix="q2" opts={paidOptions} selected={formData.q2_paid} cols="grid-cols-1 sm:grid-cols-3" onPick={(o) => handleCheckboxChange("q2_paid", o)} />
+              <OtherInput
+                id="input-q2-other"
+                name="q2_paid_other"
+                show={formData.q2_paid.includes("Khác")}
+                value={formData.q2_paid_other}
+                onChange={handleChange}
+              />
             </Question>
 
             <Question n={3} title="Tần suất dùng AI cho công việc">
               <SingleChoice idPrefix="q3" opts={frequencyOptions} selected={formData.q3_frequency} cols="grid-cols-2 sm:grid-cols-4" onPick={(o) => setFormData(p => ({ ...p, q3_frequency: o }))} />
             </Question>
 
-            <Question n={4} title="Bạn đã từng tự làm việc nào bằng AI?" hint="chọn nhiều">
+            <Question n={4} title="Bạn đã từng làm việc nào sau đây?" hint="chọn nhiều">
               <MultiChoice idPrefix="q4" opts={pastTaskOptions} selected={formData.q4_past_tasks} cols="grid-cols-1 sm:grid-cols-2" onPick={(o) => handleCheckboxChange("q4_past_tasks", o)} />
             </Question>
 
-            <Question n={5} title="Bạn hiểu khái niệm nào sau đây?" hint="chọn nhiều">
+            <Question n={5} title="Bạn hiểu các khái niệm nào?" hint="chọn nhiều">
               <MultiChoice idPrefix="q5" opts={conceptOptions} selected={formData.q5_concepts} cols="grid-cols-2 sm:grid-cols-3" onPick={(o) => handleCheckboxChange("q5_concepts", o)} />
-            </Question>
-
-            <Question n={6} title="Kinh nghiệm lập trình của bạn">
-              <SingleChoice idPrefix="q6" opts={codingExpOptions} selected={formData.q6_coding_exp} cols="grid-cols-1 sm:grid-cols-3" onPick={(o) => setFormData(p => ({ ...p, q6_coding_exp: o }))} />
             </Question>
           </div>
         )}
@@ -516,11 +570,11 @@ export default function SurveyForm({ onSuccess }: SurveyFormProps) {
               </p>
             </div>
 
-            <Question n={7} title="Bạn mong muốn học lớp nào nhất?" hint="chọn nhiều">
+            <Question n={7} title="Bạn mong muốn học gì nhất?" hint="chọn nhiều">
               <MultiChoice idPrefix="q7" opts={goalOptions} selected={formData.q7_goals} cols="grid-cols-1" onPick={(o) => handleCheckboxChange("q7_goals", o)} />
             </Question>
 
-            <Question n={8} title="Định hướng dùng AI lâu dài của bạn">
+            <Question n={8} title="Định hướng của bạn">
               <SingleChoice idPrefix="q8" opts={orientationOptions} selected={formData.q8_orientation} cols="grid-cols-1 sm:grid-cols-3" onPick={(o) => setFormData(p => ({ ...p, q8_orientation: o }))} />
             </Question>
 
@@ -550,10 +604,10 @@ export default function SurveyForm({ onSuccess }: SurveyFormProps) {
 
             <div className="h-px bg-gradient-to-r from-line to-transparent" />
 
-            <h3 className="text-[15px] font-extrabold tracking-tight">Thời gian học thuận tiện</h3>
+            <h3 className="text-[15px] font-extrabold tracking-tight">Thời gian học mong muốn</h3>
 
             <div className="grid sm:grid-cols-2 gap-5">
-              <Question n={10} title="Khung giờ" hint="chọn nhiều">
+              <Question n={10} title="Khung giờ thuận tiện" hint="chọn nhiều">
                 <div className="flex flex-wrap gap-2">
                   {timeframeOptions.map((opt) => {
                     const on = formData.q10_timeframe.includes(opt);
@@ -572,7 +626,7 @@ export default function SurveyForm({ onSuccess }: SurveyFormProps) {
                 </div>
               </Question>
 
-              <Question n={11} title="Ngày trong tuần" hint="chọn nhiều">
+              <Question n={11} title="Ngày trong tuần thuận tiện" hint="chọn nhiều">
                 <div className="flex flex-wrap gap-2">
                   {dayOptions.map((opt) => {
                     const on = formData.q11_days.includes(opt);
@@ -592,7 +646,7 @@ export default function SurveyForm({ onSuccess }: SurveyFormProps) {
               </Question>
             </div>
 
-            <Question n={12} title="Thời lượng buổi học phù hợp nhất">
+            <Question n={12} title="Thời lượng buổi phù hợp">
               <SingleChoice idPrefix="q12" opts={["90 phút", "120 phút"]} selected={formData.q12_duration} cols="grid-cols-2 sm:grid-cols-4" onPick={(o) => setFormData(p => ({ ...p, q12_duration: o }))} />
             </Question>
           </div>
