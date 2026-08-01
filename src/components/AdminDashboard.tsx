@@ -19,6 +19,34 @@ interface AdminDashboardProps {
   onRefreshData: () => void;
 }
 
+/* Ba cấp độ dùng chung một dải xanh đậm dần trên toàn app. Giữ nguyên
+   bảng này ở mọi nơi (ô số, biểu đồ, nhãn trong bảng) để người xem nối
+   được ô số ↔ lát biểu đồ ↔ dòng dữ liệu chỉ bằng màu. */
+const LEVEL_RAMP = {
+  L1: { name: "Daily Work AI", solid: "#2E86C8", rail: "from-lv1-light to-lv1", from: "#7CD0F5", to: "#4FC3F0", pill: "from-[#E4F4FD] to-[#D3EDFB] text-[#14607F]" },
+  L2: { name: "AI Automation", solid: "#4A7EB5", rail: "from-lv2-light to-lv2-deep", from: "#6B9FD4", to: "#4A7EB5", pill: "from-[#DDE9F6] to-[#CBDDF0] text-[#274E7A]" },
+  L3: { name: "Vibe Coding", solid: "#14336E", rail: "from-lv3-light to-lv3-deep", from: "#2A5FB4", to: "#14336E", pill: "from-[#D6E0F2] to-[#C2D1EA] text-[#14336E]" },
+} as const;
+
+type LevelId = keyof typeof LEVEL_RAMP;
+
+const LEVEL_TILES: {
+  id: LevelId;
+  label: string;
+  color: string;
+  count: (c: { l1Count: number; l2Count: number; l3Count: number }) => number;
+}[] = [
+  { id: "L1", label: "Cấp độ 1", color: LEVEL_RAMP.L1.solid, count: (c) => c.l1Count },
+  { id: "L2", label: "Cấp độ 2", color: LEVEL_RAMP.L2.solid, count: (c) => c.l2Count },
+  { id: "L3", label: "Cấp độ 3", color: LEVEL_RAMP.L3.solid, count: (c) => c.l3Count },
+];
+
+const LEVEL_LABEL: Record<LevelId, string> = {
+  L1: "Cấp độ 1",
+  L2: "Cấp độ 2",
+  L3: "Cấp độ 3",
+};
+
 export default function AdminDashboard({ submissions, announcements, classes, onRefreshData }: AdminDashboardProps) {
   // Navigation tabs within Admin Panel
   const [adminSubTab, setAdminSubTab] = useState<"students" | "classes" | "announcements">("students");
@@ -56,11 +84,17 @@ export default function AdminDashboard({ submissions, announcements, classes, on
   const l2Count = submissions.filter(s => s.assignedLevel === "L2").length;
   const l3Count = submissions.filter(s => s.assignedLevel === "L3").length;
 
-  const distributionData = [
-    { name: "Daily Work AI (L1)", value: l1Count, color: "#2563eb" },
-    { name: "AI Automation (L2)", value: l2Count, color: "#4f46e5" },
-    { name: "Vibe Coding (L3)", value: l3Count, color: "#9333ea" }
-  ].filter(d => d.value > 0);
+  const distributionData = (["L1", "L2", "L3"] as LevelId[])
+    .map((id) => ({
+      id,
+      name: `${LEVEL_LABEL[id]} · ${LEVEL_RAMP[id].name}`,
+      value: id === "L1" ? l1Count : id === "L2" ? l2Count : l3Count,
+      color: LEVEL_RAMP[id].solid,
+    }))
+    .filter(d => d.value > 0);
+
+  // Giờ dữ liệu được nạp gần nhất — bảng số liệu cần cho biết độ mới
+  const lastUpdated = new Date().toLocaleTimeString("vi-VN", { hour: "2-digit", minute: "2-digit" });
 
   // Department statistics
   const deptMap: Record<string, number> = {};
@@ -203,31 +237,30 @@ export default function AdminDashboard({ submissions, announcements, classes, on
   return (
     <div className="space-y-8">
       
-      {/* PAGE HEADER */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-slate-100 pb-5">
+      {/* ══ TIÊU ĐỀ TRANG ══ */}
+      <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
         <div>
-          <h2 className="text-2xl font-bold text-slate-900 tracking-tight flex items-center gap-2">
-            <LayoutDashboard className="w-6.5 h-6.5 text-blue-600" />
-            Bảng Quản Trị Giáo Vụ & Đào Tạo
-          </h2>
-          <p className="text-xs text-slate-500 mt-1">Cung cấp báo cáo, biểu đồ phân tích và quản lý danh sách học viên, lịch học thực tế.</p>
+          <h2 className="text-2xl font-extrabold text-ink tracking-[-0.028em]">Quản trị giáo vụ</h2>
+          {/* Đây là bảng số liệu — người dùng cần biết dữ liệu mới đến đâu */}
+          <p className="text-[13.5px] text-ink-3 mt-1 tnum">
+            Cập nhật lúc {lastUpdated} · {totalSubmissions} lượt khảo sát
+          </p>
         </div>
-        
-        {/* Toggle tabs */}
-        <div className="flex rounded-xl bg-slate-100 p-1 self-start">
+
+        <div className="inline-flex self-start rounded-field p-[3px] gap-0.5 bg-gradient-to-b from-[#E8F0F9] to-[#DCE8F4]">
           {[
-            { id: "students", label: "Danh sách Học viên", icon: Users },
-            { id: "classes", label: "Quản lý Lớp học", icon: BookOpen },
-            { id: "announcements", label: "Quản lý Bảng tin", icon: BellRing }
+            { id: "students", label: "Học viên", icon: Users },
+            { id: "classes", label: "Lớp học", icon: BookOpen },
+            { id: "announcements", label: "Bảng tin", icon: BellRing }
           ].map(tab => (
             <button
               id={`admin-tab-${tab.id}`}
               key={tab.id}
               onClick={() => setAdminSubTab(tab.id as any)}
-              className={`flex items-center gap-1.5 px-4 py-2 text-xs font-bold rounded-lg transition-all cursor-pointer ${
+              className={`flex items-center gap-1.5 px-4 py-2 text-[13px] font-bold rounded-[7px] transition-all cursor-pointer ${
                 adminSubTab === tab.id
-                  ? "bg-white text-blue-600 shadow-xs"
-                  : "text-slate-600 hover:text-slate-900"
+                  ? "bg-gradient-to-b from-white to-[#F6FAFD] text-brand-navy shadow-[0_2px_6px_-2px_rgb(20_51_110/0.3)]"
+                  : "text-ink-3 hover:text-ink"
               }`}
             >
               <tab.icon className="w-3.5 h-3.5" />
@@ -237,110 +270,128 @@ export default function AdminDashboard({ submissions, announcements, classes, on
         </div>
       </div>
 
-      {/* STATS OVERVIEW FOR SUBMISSIONS */}
-      <section className="grid sm:grid-cols-4 gap-4">
-        <div className="bg-white p-5 rounded-2xl border border-slate-100 shadow-xs">
-          <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Tổng số học viên</span>
-          <div className="flex items-baseline gap-2 mt-1">
-            <span className="text-2xl font-extrabold text-slate-900 font-mono">{totalSubmissions}</span>
-            <span className="text-xs text-emerald-600 font-semibold">Khảo sát hoàn tất</span>
+      {/* ══ BỐN Ô SỐ — màu theo đúng dải cấp độ, nên nối được với biểu đồ và bảng ══ */}
+      <section className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+        <div className="surface-tile p-4">
+          <span className="text-[10.5px] font-extrabold text-ink-4 uppercase tracking-[0.09em] block">Tổng học viên</span>
+          <div className="text-[29px] font-extrabold tracking-[-0.035em] leading-none tnum mt-2 text-grad">
+            {totalSubmissions}
           </div>
         </div>
 
-        <div className="bg-white p-5 rounded-2xl border border-slate-100 shadow-xs border-l-4 border-l-blue-500">
-          <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Level 1 - Daily Work</span>
-          <div className="flex items-baseline gap-2 mt-1">
-            <span className="text-2xl font-extrabold text-blue-600 font-mono">{l1Count}</span>
-            <span className="text-xs text-slate-400">
-              {totalSubmissions > 0 ? Math.round((l1Count / totalSubmissions) * 100) : 0}% học viên
-            </span>
-          </div>
-        </div>
-
-        <div className="bg-white p-5 rounded-2xl border border-slate-100 shadow-xs border-l-4 border-l-indigo-500">
-          <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Level 2 - Automation</span>
-          <div className="flex items-baseline gap-2 mt-1">
-            <span className="text-2xl font-extrabold text-indigo-600 font-mono">{l2Count}</span>
-            <span className="text-xs text-slate-400">
-              {totalSubmissions > 0 ? Math.round((l2Count / totalSubmissions) * 100) : 0}% học viên
-            </span>
-          </div>
-        </div>
-
-        <div className="bg-white p-5 rounded-2xl border border-slate-100 shadow-xs border-l-4 border-l-purple-500">
-          <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Level 3 - Vibe Coding</span>
-          <div className="flex items-baseline gap-2 mt-1">
-            <span className="text-2xl font-extrabold text-purple-600 font-mono">{l3Count}</span>
-            <span className="text-xs text-slate-400">
-              {totalSubmissions > 0 ? Math.round((l3Count / totalSubmissions) * 100) : 0}% học viên
-            </span>
-          </div>
-        </div>
+        {LEVEL_TILES.map(({ id, label, color, count }) => {
+          const n = count({ l1Count, l2Count, l3Count });
+          return (
+            <div key={id} className="surface-tile p-4 relative overflow-hidden">
+              <span className={`absolute top-0 left-0 bottom-0 w-[4px] bg-gradient-to-b ${LEVEL_RAMP[id].rail}`} />
+              <span className="text-[10.5px] font-extrabold text-ink-4 uppercase tracking-[0.09em] block">{label}</span>
+              <div className="flex items-baseline gap-2 mt-2">
+                <span className="text-[29px] font-extrabold tracking-[-0.035em] leading-none tnum" style={{ color }}>
+                  {n}
+                </span>
+                <span className="text-[12.5px] text-ink-3 tnum">
+                  {totalSubmissions > 0 ? Math.round((n / totalSubmissions) * 100) : 0}%
+                </span>
+              </div>
+            </div>
+          );
+        })}
       </section>
 
       {/* RECHARTS PLOTS */}
       {totalSubmissions > 0 && adminSubTab === "students" && (
         <section className="grid md:grid-cols-3 gap-6">
-          {/* Level Distribution Pie Chart */}
-          <div className="bg-white p-5 rounded-2xl border border-slate-100 shadow-xs">
-            <h4 className="text-xs font-bold text-slate-800 uppercase tracking-wider mb-4">Tỷ Lệ Phân Phối Level</h4>
-            <div className="h-48 relative">
+          {/* Donut phân bố cấp độ — chú giải hình thoi đặt cạnh, không chồng lên */}
+          <div className="surface p-5">
+            <h4 className="text-[10.5px] font-extrabold text-ink-4 uppercase tracking-[0.09em]">Phân bố cấp độ</h4>
+            <div className="h-44 relative mt-3">
               <ResponsiveContainer width="100%" height="100%">
                 <PieChart>
+                  <defs>
+                    {distributionData.map((d) => (
+                      <linearGradient key={d.id} id={`grad-${d.id}`} x1="0" y1="0" x2="1" y2="1">
+                        <stop offset="0%" stopColor={LEVEL_RAMP[d.id].from} />
+                        <stop offset="100%" stopColor={LEVEL_RAMP[d.id].to} />
+                      </linearGradient>
+                    ))}
+                  </defs>
                   <Pie
                     data={distributionData}
                     cx="50%"
                     cy="50%"
-                    innerRadius={50}
-                    outerRadius={70}
-                    paddingAngle={4}
+                    innerRadius={52}
+                    outerRadius={72}
+                    paddingAngle={3}
                     dataKey="value"
+                    stroke="none"
                   >
-                    {distributionData.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={entry.color} />
+                    {distributionData.map((entry) => (
+                      <Cell key={entry.id} fill={`url(#grad-${entry.id})`} />
                     ))}
                   </Pie>
-                  <Tooltip formatter={(value) => [`${value} học viên`]} />
+                  <Tooltip
+                    formatter={(value) => [`${value} học viên`, ""]}
+                    contentStyle={{
+                      borderRadius: 10,
+                      border: "1px solid #D8E4F2",
+                      boxShadow: "0 14px 30px -14px rgb(20 51 110 / 0.4)",
+                      fontSize: 13,
+                    }}
+                  />
                 </PieChart>
               </ResponsiveContainer>
-              {/* Legend overlay */}
-              <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-                <span className="text-lg font-extrabold text-slate-700 font-mono">{totalSubmissions}</span>
+              <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
+                <span className="text-[26px] font-extrabold text-ink tnum leading-none">{totalSubmissions}</span>
+                <span className="text-[11px] text-ink-4 mt-0.5">học viên</span>
               </div>
             </div>
-            <div className="mt-4 space-y-1.5">
-              {distributionData.map((d, i) => (
-                <div key={i} className="flex items-center justify-between text-xs font-sans">
-                  <div className="flex items-center gap-1.5">
-                    <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: d.color }} />
-                    <span className="text-slate-600">{d.name}</span>
-                  </div>
-                  <span className="font-bold text-slate-800">{d.value}</span>
+            <div className="mt-4 space-y-2">
+              {distributionData.map((d) => (
+                <div key={d.id} className="flex items-center gap-2.5 text-[13px]">
+                  <span
+                    className="w-2.5 h-2.5 rotate-45 rounded-[2px] flex-none"
+                    style={{ background: `linear-gradient(135deg, ${LEVEL_RAMP[d.id].from}, ${LEVEL_RAMP[d.id].to})` }}
+                  />
+                  <span className="text-ink-3 truncate">{d.name}</span>
+                  <span className="ml-auto font-bold text-ink tnum">{d.value}</span>
                 </div>
               ))}
             </div>
           </div>
 
-          {/* Department Bar Chart */}
-          <div className="bg-white p-5 rounded-2xl border border-slate-100 shadow-xs md:col-span-2">
-            <h4 className="text-xs font-bold text-slate-800 uppercase tracking-wider mb-4">Top 5 Khoa/Phòng Tham Gia</h4>
+          {/* Cột theo khoa phòng — đổ màu dọc thay vì bệt */}
+          <div className="surface p-5 md:col-span-2">
+            <h4 className="text-[10.5px] font-extrabold text-ink-4 uppercase tracking-[0.09em]">
+              Năm khoa/phòng tham gia nhiều nhất
+            </h4>
             {departmentData.length === 0 ? (
-              <div className="h-48 flex items-center justify-center text-slate-400 text-xs font-sans">Chưa có dữ liệu</div>
+              <div className="h-44 flex items-center justify-center text-ink-4 text-[13.5px]">Chưa có dữ liệu</div>
             ) : (
-              <div className="h-48">
+              <div className="h-44 mt-3">
                 <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={departmentData}>
-                    <XAxis dataKey="name" stroke="#94a3b8" fontSize={10} tickLine={false} />
-                    <YAxis stroke="#94a3b8" fontSize={10} tickLine={false} />
-                    <Tooltip cursor={{ fill: '#f8fafc' }} />
-                    <Bar dataKey="students" fill="#2563eb" radius={[4, 4, 0, 0]} barSize={36} />
+                  <BarChart data={departmentData} margin={{ top: 4, right: 4, left: -18, bottom: 0 }}>
+                    <defs>
+                      <linearGradient id="grad-bar" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="0%" stopColor="#7CD0F5" />
+                        <stop offset="100%" stopColor="#2E86C8" />
+                      </linearGradient>
+                    </defs>
+                    <XAxis dataKey="name" stroke="#6B7E95" fontSize={11} tickLine={false} axisLine={false} />
+                    <YAxis stroke="#6B7E95" fontSize={11} tickLine={false} axisLine={false} allowDecimals={false} />
+                    <Tooltip
+                      cursor={{ fill: "rgb(79 195 240 / 0.08)" }}
+                      contentStyle={{
+                        borderRadius: 10,
+                        border: "1px solid #D8E4F2",
+                        boxShadow: "0 14px 30px -14px rgb(20 51 110 / 0.4)",
+                        fontSize: 13,
+                      }}
+                    />
+                    <Bar dataKey="students" name="Học viên" fill="url(#grad-bar)" radius={[5, 5, 2, 2]} barSize={38} />
                   </BarChart>
                 </ResponsiveContainer>
               </div>
             )}
-            <div className="mt-4 text-[10px] text-slate-400 text-center font-sans">
-              *Học viên phân loại chủ yếu tại các Khoa lâm sàng và Hành chính tổng hợp
-            </div>
           </div>
         </section>
       )}
@@ -350,40 +401,44 @@ export default function AdminDashboard({ submissions, announcements, classes, on
       {/* 1. STUDENTS SUBMISSIONS */}
       {adminSubTab === "students" && (
         <div className="space-y-4">
-          <div className="bg-white p-5 rounded-2xl border border-slate-100 shadow-xs space-y-4">
+          <div className="surface p-5 space-y-4">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
               <div className="relative flex-1 max-w-sm">
-                <Search className="absolute left-3.5 top-3.5 w-4 h-4 text-slate-400" />
+                <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-ink-4 pointer-events-none" />
                 <input
                   id="search-students"
                   type="text"
-                  placeholder="Tìm học viên, khoa/phòng..."
+                  placeholder="Tìm theo tên hoặc khoa…"
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
-                  className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-3 focus:ring-blue-200"
+                  className="field w-full pl-10 pr-4 py-2.5 text-[14px]"
                 />
               </div>
 
-              <div className="flex gap-2">
-                <select
-                  id="filter-level"
-                  value={levelFilter}
-                  onChange={(e) => setLevelFilter(e.target.value as any)}
-                  className="px-3 py-2 border border-slate-200 rounded-xl text-xs font-bold text-slate-600 bg-white focus:outline-none focus:ring-3 focus:ring-blue-200"
-                >
-                  <option value="ALL">Tất cả các Cấp độ</option>
-                  <option value="L1">Daily Work (L1)</option>
-                  <option value="L2">AI Automation (L2)</option>
-                  <option value="L3">Vibe Coding (L3)</option>
-                </select>
+              {/* Lọc cấp độ dạng nút gạt — nhanh hơn thả xuống khi chỉ có 4 lựa chọn */}
+              <div className="inline-flex self-start rounded-field p-[3px] gap-0.5 bg-gradient-to-b from-[#EDF3FA] to-[#E1EAF4]">
+                {(["ALL", "L1", "L2", "L3"] as const).map((lv) => (
+                  <button
+                    key={lv}
+                    id={`filter-level-${lv}`}
+                    onClick={() => setLevelFilter(lv)}
+                    className={`px-3.5 py-1.5 rounded-[6px] text-[12.5px] font-bold transition-all cursor-pointer ${
+                      levelFilter === lv
+                        ? "bg-white text-brand-navy shadow-[0_2px_5px_-2px_rgb(20_51_110/0.3)]"
+                        : "text-ink-3 hover:text-ink"
+                    }`}
+                  >
+                    {lv === "ALL" ? "Tất cả" : LEVEL_LABEL[lv].replace("Cấp độ ", "C")}
+                  </button>
+                ))}
               </div>
             </div>
 
             {/* Submissions Table */}
-            <div className="overflow-x-auto border border-slate-100 rounded-xl">
+            <div className="overflow-x-auto border border-line-soft rounded-field">
               <table className="w-full text-left border-collapse">
                 <thead>
-                  <tr className="bg-slate-50 text-[10px] font-bold text-slate-500 uppercase tracking-wider border-b border-slate-100">
+                  <tr className="bg-gradient-to-b from-[#F4F8FC] to-[#EAF1F8] text-[10px] font-bold text-ink-3 uppercase tracking-wider border-b border-line-soft">
                     <th className="px-4 py-3">Học viên</th>
                     <th className="px-4 py-3">Khoa / Phòng</th>
                     <th className="px-4 py-3">Điểm số</th>
@@ -392,48 +447,46 @@ export default function AdminDashboard({ submissions, announcements, classes, on
                     <th className="px-4 py-3 text-right">Thao tác</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-slate-100 text-xs">
+                <tbody className="divide-y divide-line-soft text-xs">
                   {filteredSubmissions.length === 0 ? (
                     <tr>
-                      <td colSpan={6} className="text-center py-10 text-slate-400 italic">
+                      <td colSpan={6} className="text-center py-10 text-ink-4 italic">
                         Không tìm thấy thông tin đăng ký khảo sát nào.
                       </td>
                     </tr>
                   ) : (
                     filteredSubmissions.map((sub) => (
-                      <tr key={sub.id} className="hover:bg-slate-50/50 transition-colors">
-                        <td className="px-4 py-4.5 font-bold text-slate-800">{sub.studentName}</td>
-                        <td className="px-4 py-4.5 text-slate-600">{sub.department}</td>
-                        <td className="px-4 py-4.5 font-mono font-bold text-slate-700">{sub.score} / 100</td>
+                      <tr key={sub.id} className="hover:bg-[#F6FAFD] transition-colors">
+                        <td className="px-4 py-4.5 font-bold text-ink">{sub.studentName}</td>
+                        <td className="px-4 py-4.5 text-ink-3">{sub.department}</td>
+                        <td className="px-4 py-4.5 tnum font-bold text-ink-2">{sub.score} / 100</td>
                         <td className="px-4 py-4.5">
-                          <span className={`inline-flex px-2 py-0.5 rounded text-[10px] font-bold ${
-                            sub.assignedLevel === "L3"
-                              ? "bg-purple-100 text-purple-700"
-                              : sub.assignedLevel === "L2"
-                              ? "bg-indigo-100 text-indigo-700"
-                              : "bg-blue-100 text-blue-700"
-                          }`}>
-                            {sub.assignedLevel === "L3" ? "Level 3" : sub.assignedLevel === "L2" ? "Level 2" : "Level 1"}
+                          <span
+                            className={`inline-flex px-2.5 py-1 rounded-[5px] text-[11.5px] font-bold bg-gradient-to-br ${
+                              LEVEL_RAMP[sub.assignedLevel].pill
+                            }`}
+                          >
+                            {LEVEL_LABEL[sub.assignedLevel]}
                           </span>
                         </td>
                         <td className="px-4 py-4.5">
                           <div className="space-y-0.5">
-                            <span className="block text-slate-500 font-mono">{sub.phone}</span>
-                            <span className="block text-[10px] text-slate-400 font-mono">{sub.email}</span>
+                            <span className="block text-ink-3 tnum">{sub.phone}</span>
+                            <span className="block text-[10px] text-ink-4 tnum">{sub.email}</span>
                           </div>
                         </td>
                         <td className="px-4 py-4.5 text-right space-x-2">
                           <button
                             id={`view-detail-${sub.id}`}
                             onClick={() => setSelectedSubmission(sub)}
-                            className="text-xs font-semibold text-blue-600 hover:text-blue-800 transition-colors cursor-pointer"
+                            className="text-xs font-semibold text-brand-navy hover:text-brand-sky-deep transition-colors cursor-pointer"
                           >
                             Xem chi tiết
                           </button>
                           <button
                             id={`delete-sub-${sub.id}`}
                             onClick={() => handleDeleteDoc("survey_submissions", sub.id)}
-                            className="text-xs font-semibold text-red-500 hover:text-red-700 transition-colors cursor-pointer"
+                            className="text-xs font-semibold text-danger hover:text-danger-deep transition-colors cursor-pointer"
                           >
                             Xóa
                           </button>
@@ -448,48 +501,55 @@ export default function AdminDashboard({ submissions, announcements, classes, on
 
           {/* Student details expansion modal/pane if selected */}
           {selectedSubmission && (
-            <div className="bg-slate-900 text-white rounded-2xl p-6 sm:p-8 space-y-6">
-              <div className="flex items-center justify-between border-b border-slate-800 pb-4">
-                <div>
-                  <h4 className="text-lg font-bold">{selectedSubmission.studentName}</h4>
-                  <span className="text-xs text-slate-400">Khoa/Phòng: {selectedSubmission.department}</span>
+            <div className="surface cut-corner p-6 sm:p-7 space-y-5">
+              <div className="flex items-start justify-between gap-4 pb-4 border-b border-line-soft">
+                <div className="flex items-center gap-3">
+                  <span className={`w-1.5 h-11 rounded-full flex-none bg-gradient-to-b ${LEVEL_RAMP[selectedSubmission.assignedLevel].rail}`} />
+                  <div>
+                    <h4 className="text-[18px] font-extrabold tracking-[-0.02em]">{selectedSubmission.studentName}</h4>
+                    <span className="text-[13px] text-ink-3">{selectedSubmission.department}</span>
+                  </div>
                 </div>
                 <button
                   id="close-sub-detail"
                   onClick={() => setSelectedSubmission(null)}
-                  className="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg text-xs cursor-pointer"
+                  className="btn-secondary px-3.5 py-2 text-[13px] cursor-pointer flex-none"
                 >
-                  Đóng chi tiết
+                  Đóng
                 </button>
               </div>
 
-              <div className="grid sm:grid-cols-3 gap-6 text-xs">
-                <div className="space-y-3">
-                  <span className="font-bold text-blue-400 block uppercase tracking-wider">Thông tin liên lạc</span>
-                  <div className="space-y-1.5 font-mono text-slate-300">
-                    <p>SĐT: {selectedSubmission.phone}</p>
-                    <p>Email: {selectedSubmission.email}</p>
-                    <p>Xếp lớp: Level {selectedSubmission.assignedLevel}</p>
-                    <p>Điểm: {selectedSubmission.score}/100</p>
+              <div className="grid sm:grid-cols-3 gap-6">
+                <div>
+                  <span className="text-[10.5px] font-extrabold text-ink-4 uppercase tracking-[0.09em] block">Liên hệ</span>
+                  <div className="mt-2.5 space-y-1.5 text-[13.5px] text-ink-2">
+                    <p className="tnum">{selectedSubmission.phone}</p>
+                    <p className="break-all">{selectedSubmission.email}</p>
+                    <p>
+                      {LEVEL_LABEL[selectedSubmission.assignedLevel]} ·{" "}
+                      <span className="tnum font-semibold">{selectedSubmission.score}/100</span>
+                    </p>
                   </div>
                 </div>
 
-                <div className="space-y-3 sm:col-span-2">
-                  <span className="font-bold text-indigo-400 block uppercase tracking-wider">Công việc lặp đi lặp lại muốn cải thiện bằng AI</span>
-                  <p className="text-slate-300 leading-relaxed italic bg-slate-800/50 p-3.5 rounded-xl border border-slate-800 font-sans">
-                    "{selectedSubmission.answers.q9_repetitive_tasks || "Không cung cấp mô tả"}"
+                <div className="sm:col-span-2">
+                  <span className="text-[10.5px] font-extrabold text-ink-4 uppercase tracking-[0.09em] block">
+                    Công việc lặp lại muốn cải thiện bằng AI
+                  </span>
+                  <p className="mt-2.5 text-[13.5px] text-ink-2 leading-relaxed rounded-r-[6px] border-l-[3px] border-brand-sky-deep bg-gradient-to-br from-brand-sky/12 to-brand-sky/4 px-3.5 py-3">
+                    {selectedSubmission.answers.q9_repetitive_tasks || "Không cung cấp mô tả"}
                   </p>
                 </div>
               </div>
 
-              <div className="pt-4 border-t border-slate-800 grid sm:grid-cols-2 gap-4 text-xs font-sans">
+              <div className="pt-4 border-t border-line-soft grid sm:grid-cols-2 gap-5">
                 <div>
-                  <span className="font-semibold text-slate-400 block mb-1">Công cụ đã dùng:</span>
-                  <p className="text-slate-200">{(selectedSubmission.answers.q1_tools || []).join(", ") || "Chưa dùng bao giờ"}</p>
+                  <span className="text-[10.5px] font-extrabold text-ink-4 uppercase tracking-[0.09em] block mb-1.5">Công cụ đã dùng</span>
+                  <p className="text-[13.5px] text-ink-2">{(selectedSubmission.answers.q1_tools || []).join(", ") || "Chưa dùng bao giờ"}</p>
                 </div>
                 <div>
-                  <span className="font-semibold text-slate-400 block mb-1">Kiến thức đã biết:</span>
-                  <p className="text-slate-200">{(selectedSubmission.answers.q5_concepts || []).join(", ") || "Chưa biết khái niệm nào"}</p>
+                  <span className="text-[10.5px] font-extrabold text-ink-4 uppercase tracking-[0.09em] block mb-1.5">Khái niệm đã biết</span>
+                  <p className="text-[13.5px] text-ink-2">{(selectedSubmission.answers.q5_concepts || []).join(", ") || "Chưa biết khái niệm nào"}</p>
                 </div>
               </div>
             </div>
@@ -502,32 +562,32 @@ export default function AdminDashboard({ submissions, announcements, classes, on
         <div className="grid lg:grid-cols-3 gap-6">
           {/* Class List */}
           <div className="lg:col-span-2 space-y-4">
-            <h3 className="text-sm font-bold text-slate-800 uppercase tracking-wider">Danh Sách Lớp Học Hoạt Động</h3>
+            <h3 className="text-sm font-bold text-ink uppercase tracking-wider">Danh Sách Lớp Học Hoạt Động</h3>
             
             <div className="grid sm:grid-cols-2 gap-4">
               {classes.map((cls) => (
-                <div key={cls.id} className={`bg-white p-5 rounded-2xl border shadow-xs space-y-3 transition-all relative ${
-                  editingClassId === cls.id ? "border-blue-400 ring-2 ring-blue-100" : "border-slate-100 hover:border-slate-200"
+                <div key={cls.id} className={`bg-white p-5 rounded-card border shadow-xs space-y-3 transition-all relative ${
+                  editingClassId === cls.id ? "border-brand-sky-deep ring-2 ring-brand-sky-deep/20" : "border-line-soft hover:border-line"
                 }`}>
                   <div className="flex items-center justify-between pr-14">
                     <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${
                       cls.level === "L3"
-                        ? "bg-purple-100 text-purple-700"
+                        ? "bg-gradient-to-br from-[#D6E0F2] to-[#C2D1EA] text-[#14336E]"
                         : cls.level === "L2"
-                        ? "bg-indigo-100 text-indigo-700"
-                        : "bg-blue-100 text-blue-700"
+                        ? "bg-gradient-to-br from-[#DDE9F6] to-[#CBDDF0] text-[#274E7A]"
+                        : "bg-gradient-to-br from-[#E4F4FD] to-[#D3EDFB] text-[#14607F]"
                     }`}>
                       Level {cls.level}
                     </span>
-                    <span className="text-xs font-bold font-mono text-slate-500">{cls.studentsCount} học viên</span>
+                    <span className="text-xs font-bold tnum text-ink-3">{cls.studentsCount} học viên</span>
                   </div>
 
                   <div>
-                    <h4 className="font-bold text-slate-900 text-sm leading-snug">{cls.name}</h4>
-                    <p className="text-xs text-slate-500 mt-1">{cls.schedule}</p>
+                    <h4 className="font-bold text-ink text-sm leading-snug">{cls.name}</h4>
+                    <p className="text-xs text-ink-3 mt-1">{cls.schedule}</p>
                   </div>
 
-                  <div className="pt-2.5 border-t border-slate-50 text-[11px] text-slate-500 space-y-1">
+                  <div className="pt-2.5 border-t border-line-soft text-[11px] text-ink-3 space-y-1">
                     <p><b>Giảng viên:</b> {cls.instructor}</p>
                     <p><b>Địa điểm:</b> {cls.room}</p>
                   </div>
@@ -537,7 +597,7 @@ export default function AdminDashboard({ submissions, announcements, classes, on
                       id={`edit-class-${cls.id}`}
                       onClick={() => handleEditClass(cls)}
                       title="Sửa lớp học"
-                      className="text-slate-300 hover:text-blue-600 transition-colors p-1 rounded-md cursor-pointer"
+                      className="text-ink-4 hover:text-brand-navy transition-colors p-1 rounded-md cursor-pointer"
                     >
                       <Pencil className="w-4 h-4" />
                     </button>
@@ -545,7 +605,7 @@ export default function AdminDashboard({ submissions, announcements, classes, on
                       id={`delete-class-${cls.id}`}
                       onClick={() => handleDeleteDoc("classes", cls.id)}
                       title="Xóa lớp học"
-                      className="text-slate-300 hover:text-red-500 transition-colors p-1 rounded-md cursor-pointer"
+                      className="text-ink-4 hover:text-danger transition-colors p-1 rounded-md cursor-pointer"
                     >
                       <Trash2 className="w-4 h-4" />
                     </button>
@@ -556,15 +616,15 @@ export default function AdminDashboard({ submissions, announcements, classes, on
           </div>
 
           {/* Form Create / Edit Class */}
-          <div className={`bg-white p-5 rounded-2xl border shadow-xs self-start ${
-            editingClassId ? "border-blue-300" : "border-slate-100"
+          <div className={`bg-white p-5 rounded-card border shadow-xs self-start ${
+            editingClassId ? "border-brand-sky-deep" : "border-line-soft"
           }`}>
             <div className="flex items-center justify-between mb-4">
-              <h3 className="text-sm font-bold text-slate-800 uppercase tracking-wider flex items-center gap-1.5">
+              <h3 className="text-sm font-bold text-ink uppercase tracking-wider flex items-center gap-1.5">
                 {editingClassId ? (
-                  <><Pencil className="w-4 h-4 text-blue-600" /> Sửa Lớp Học</>
+                  <><Pencil className="w-4 h-4 text-brand-navy" /> Sửa Lớp Học</>
                 ) : (
-                  <><Plus className="w-4 h-4 text-blue-600" /> Thêm Lớp Học Mới</>
+                  <><Plus className="w-4 h-4 text-brand-navy" /> Thêm Lớp Học Mới</>
                 )}
               </h3>
               {editingClassId && (
@@ -573,7 +633,7 @@ export default function AdminDashboard({ submissions, announcements, classes, on
                   type="button"
                   onClick={resetClassForm}
                   title="Hủy sửa"
-                  className="flex items-center gap-1 text-[11px] font-semibold text-slate-500 hover:text-slate-800 transition-colors cursor-pointer"
+                  className="flex items-center gap-1 text-[11px] font-semibold text-ink-3 hover:text-ink transition-colors cursor-pointer"
                 >
                   <X className="w-3.5 h-3.5" /> Hủy
                 </button>
@@ -582,12 +642,12 @@ export default function AdminDashboard({ submissions, announcements, classes, on
 
             <form onSubmit={handleSaveClass} className="space-y-4 text-xs">
               <div className="space-y-1">
-                <label className="font-bold text-slate-700">Cấp độ đào tạo</label>
+                <label className="font-bold text-ink-2">Cấp độ đào tạo</label>
                 <select
                   id="new-class-level"
                   value={newClass.level}
                   onChange={(e) => setNewClass(prev => ({ ...prev, level: e.target.value as any }))}
-                  className="w-full p-2.5 rounded-lg border border-slate-200"
+                  className="w-full p-2.5 rounded-lg border border-line"
                 >
                   <option value="L1">Level 1 - Daily Work AI</option>
                   <option value="L2">Level 2 - AI Automation</option>
@@ -596,61 +656,61 @@ export default function AdminDashboard({ submissions, announcements, classes, on
               </div>
 
               <div className="space-y-1">
-                <label className="font-bold text-slate-700">Tên lớp học</label>
+                <label className="font-bold text-ink-2">Tên lớp học</label>
                 <input
                   id="new-class-name"
                   type="text"
                   placeholder="Lớp L1-K3 (Sáng Thứ Bảy)"
                   value={newClass.name}
                   onChange={(e) => setNewClass(prev => ({ ...prev, name: e.target.value }))}
-                  className="w-full p-2.5 rounded-lg border border-slate-200"
+                  className="w-full p-2.5 rounded-lg border border-line"
                 />
               </div>
 
               <div className="space-y-1">
-                <label className="font-bold text-slate-700">Lịch học chi tiết</label>
+                <label className="font-bold text-ink-2">Lịch học chi tiết</label>
                 <input
                   id="new-class-schedule"
                   type="text"
                   placeholder="08:30 - 10:30, Thứ Bảy hàng tuần"
                   value={newClass.schedule}
                   onChange={(e) => setNewClass(prev => ({ ...prev, schedule: e.target.value }))}
-                  className="w-full p-2.5 rounded-lg border border-slate-200"
+                  className="w-full p-2.5 rounded-lg border border-line"
                 />
               </div>
 
               <div className="space-y-1">
-                <label className="font-bold text-slate-700">Giảng viên / Trợ giảng</label>
+                <label className="font-bold text-ink-2">Giảng viên / Trợ giảng</label>
                 <input
                   id="new-class-instructor"
                   type="text"
                   placeholder="TS. Nguyễn Minh Triết"
                   value={newClass.instructor}
                   onChange={(e) => setNewClass(prev => ({ ...prev, instructor: e.target.value }))}
-                  className="w-full p-2.5 rounded-lg border border-slate-200"
+                  className="w-full p-2.5 rounded-lg border border-line"
                 />
               </div>
 
               <div className="space-y-1">
-                <label className="font-bold text-slate-700">Phòng học (Địa điểm)</label>
+                <label className="font-bold text-ink-2">Phòng học (Địa điểm)</label>
                 <input
                   id="new-class-room"
                   type="text"
                   placeholder="Phòng Đào tạo số 1 (Nhà A)"
                   value={newClass.room}
                   onChange={(e) => setNewClass(prev => ({ ...prev, room: e.target.value }))}
-                  className="w-full p-2.5 rounded-lg border border-slate-200"
+                  className="w-full p-2.5 rounded-lg border border-line"
                 />
               </div>
 
               <div className="space-y-1">
-                <label className="font-bold text-slate-700">Số lượng học viên dự kiến</label>
+                <label className="font-bold text-ink-2">Số lượng học viên dự kiến</label>
                 <input
                   id="new-class-count"
                   type="number"
                   value={newClass.studentsCount || ""}
                   onChange={(e) => setNewClass(prev => ({ ...prev, studentsCount: parseInt(e.target.value) || 0 }))}
-                  className="w-full p-2.5 rounded-lg border border-slate-200 font-mono"
+                  className="w-full p-2.5 rounded-lg border border-line tnum"
                 />
               </div>
 
@@ -658,7 +718,7 @@ export default function AdminDashboard({ submissions, announcements, classes, on
                 id="btn-create-class"
                 type="submit"
                 disabled={loading}
-                className="w-full py-2.5 bg-blue-600 hover:bg-blue-500 text-white font-bold rounded-lg transition-all cursor-pointer disabled:opacity-50"
+                className="w-full py-2.5 btn-primary text-white font-bold rounded-lg transition-all cursor-pointer disabled:opacity-50"
               >
                 {loading ? "Đang xử lý..." : editingClassId ? "Cập Nhật Lớp Học" : "Lưu Lớp Học"}
               </button>
@@ -672,32 +732,32 @@ export default function AdminDashboard({ submissions, announcements, classes, on
         <div className="grid lg:grid-cols-3 gap-6">
           {/* Current announcements */}
           <div className="lg:col-span-2 space-y-4">
-            <h3 className="text-sm font-bold text-slate-800 uppercase tracking-wider">Thông báo hiện tại</h3>
+            <h3 className="text-sm font-bold text-ink uppercase tracking-wider">Thông báo hiện tại</h3>
             
             <div className="space-y-3">
               {announcements.map((ann) => (
-                <div key={ann.id} className="bg-white p-5 rounded-2xl border border-slate-100 shadow-xs relative flex flex-col justify-between hover:border-slate-200 transition-all">
+                <div key={ann.id} className="surface p-5 relative flex flex-col justify-between hover:border-line transition-all">
                   <div className="space-y-2 max-w-[90%]">
                     <div className="flex items-center gap-2">
-                      <span className="text-[10px] font-mono text-slate-400">{ann.date}</span>
+                      <span className="text-[10px] tnum text-ink-4">{ann.date}</span>
                       <span className={`text-[9px] uppercase font-bold px-1.5 py-0.5 rounded ${
                         ann.category === "important" 
-                          ? "bg-red-50 text-red-600" 
+                          ? "bg-gradient-to-br from-[#FEF2F2] to-[#FDE8E8] text-danger-deep" 
                           : ann.category === "schedule" 
-                          ? "bg-amber-50 text-amber-600" 
-                          : "bg-slate-100 text-slate-600"
+                          ? "bg-gradient-to-br from-[#FFFBEB] to-[#FEF3C7] text-[#92400E]" 
+                          : "bg-gradient-to-b from-[#E8F0F9] to-[#DCE8F4] text-ink-3"
                       }`}>
                         {ann.category === "important" ? "Quan Trọng" : ann.category === "schedule" ? "Lịch Học" : "Tin tức"}
                       </span>
                     </div>
-                    <h4 className="font-bold text-slate-900 text-sm">{ann.title}</h4>
-                    <p className="text-xs text-slate-500 leading-relaxed font-sans">{ann.content}</p>
+                    <h4 className="font-bold text-ink text-sm">{ann.title}</h4>
+                    <p className="text-xs text-ink-3 leading-relaxed font-sans">{ann.content}</p>
                   </div>
 
                   <button
                     id={`delete-ann-${ann.id}`}
                     onClick={() => handleDeleteDoc("announcements", ann.id)}
-                    className="absolute top-4 right-4 text-slate-300 hover:text-red-500 transition-colors p-1"
+                    className="absolute top-4 right-4 text-ink-4 hover:text-danger transition-colors p-1"
                   >
                     <Trash2 className="w-4 h-4" />
                   </button>
@@ -707,20 +767,20 @@ export default function AdminDashboard({ submissions, announcements, classes, on
           </div>
 
           {/* Create Announcement Form */}
-          <div className="bg-white p-5 rounded-2xl border border-slate-100 shadow-xs self-start">
-            <h3 className="text-sm font-bold text-slate-800 uppercase tracking-wider mb-4 flex items-center gap-1.5">
-              <Plus className="w-4 h-4 text-blue-600" />
+          <div className="surface p-5 self-start">
+            <h3 className="text-sm font-bold text-ink uppercase tracking-wider mb-4 flex items-center gap-1.5">
+              <Plus className="w-4 h-4 text-brand-navy" />
               Đăng Thông Báo Mới
             </h3>
 
             <form onSubmit={handleCreateAnn} className="space-y-4 text-xs">
               <div className="space-y-1">
-                <label className="font-bold text-slate-700">Phân loại thông báo</label>
+                <label className="font-bold text-ink-2">Phân loại thông báo</label>
                 <select
                   id="new-ann-category"
                   value={newAnn.category}
                   onChange={(e) => setNewAnn(prev => ({ ...prev, category: e.target.value as any }))}
-                  className="w-full p-2.5 rounded-lg border border-slate-200 bg-white"
+                  className="w-full p-2.5 rounded-lg border border-line bg-white"
                 >
                   <option value="general">Tin tức chung (General)</option>
                   <option value="important">Tin khẩn / Quan trọng (Important)</option>
@@ -729,26 +789,26 @@ export default function AdminDashboard({ submissions, announcements, classes, on
               </div>
 
               <div className="space-y-1">
-                <label className="font-bold text-slate-700">Tiêu đề thông báo</label>
+                <label className="font-bold text-ink-2">Tiêu đề thông báo</label>
                 <input
                   id="new-ann-title"
                   type="text"
                   placeholder="Yêu cầu chuẩn bị tài khoản email trước buổi học..."
                   value={newAnn.title}
                   onChange={(e) => setNewAnn(prev => ({ ...prev, title: e.target.value }))}
-                  className="w-full p-2.5 rounded-lg border border-slate-200"
+                  className="w-full p-2.5 rounded-lg border border-line"
                 />
               </div>
 
               <div className="space-y-1">
-                <label className="font-bold text-slate-700">Nội dung chi tiết</label>
+                <label className="font-bold text-ink-2">Nội dung chi tiết</label>
                 <textarea
                   id="new-ann-content"
                   rows={4}
                   placeholder="Nhập nội dung thông báo gửi đến toàn thể lớp học hoặc thông báo phân lớp..."
                   value={newAnn.content}
                   onChange={(e) => setNewAnn(prev => ({ ...prev, content: e.target.value }))}
-                  className="w-full p-2.5 rounded-lg border border-slate-200"
+                  className="w-full p-2.5 rounded-lg border border-line"
                 />
               </div>
 
@@ -756,7 +816,7 @@ export default function AdminDashboard({ submissions, announcements, classes, on
                 id="btn-create-ann"
                 type="submit"
                 disabled={loading}
-                className="w-full py-2.5 bg-blue-600 hover:bg-blue-500 text-white font-bold rounded-lg transition-all cursor-pointer disabled:opacity-50"
+                className="w-full py-2.5 btn-primary text-white font-bold rounded-lg transition-all cursor-pointer disabled:opacity-50"
               >
                 {loading ? "Đang xử lý..." : "Đăng Thông Báo"}
               </button>

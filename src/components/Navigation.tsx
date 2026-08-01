@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { GraduationCap, FileText, LayoutDashboard, Menu, X, ToggleLeft, ToggleRight } from "lucide-react";
+import { GraduationCap, FileText, LayoutDashboard, Menu, X, LogOut, KeyRound } from "lucide-react";
 import HungVuongLogo from "./HungVuongLogo";
 
 interface NavigationProps {
@@ -9,182 +9,110 @@ interface NavigationProps {
   onLogout: () => void;
 }
 
+const TABS = [
+  { id: "home", label: "Chương trình", icon: GraduationCap },
+  { id: "survey", label: "Khảo sát xếp lớp", icon: FileText },
+  { id: "admin", label: "Quản trị", icon: LayoutDashboard },
+] as const;
+
 export default function Navigation({ activeTab, setActiveTab, isAdmin, onLogout }: NavigationProps) {
   const [isOpen, setIsOpen] = useState(false);
 
+  const tabClass = (on: boolean) =>
+    `flex items-center gap-2 px-4 py-2 rounded-field text-[13.5px] transition-all cursor-pointer ${
+      on
+        ? "bg-gradient-to-b from-[#EAF3FC] to-[#DDEBF8] text-brand-navy font-bold shadow-[0_1px_0_rgb(255_255_255/0.9)_inset]"
+        : "text-ink-3 font-semibold hover:bg-white/70 hover:text-ink"
+    }`;
+
   return (
-    <nav className="bg-slate-950/80 border-b border-slate-800/60 backdrop-blur-md sticky top-0 z-50 shadow-sm">
+    <nav className="sticky top-0 z-50 backdrop-blur-[14px] bg-gradient-to-b from-white/95 to-white/80 border-b border-brand-navy/15">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex justify-between h-16">
-          {/* Logo and branding */}
-          <div className="flex items-center">
-            <div className="flex-shrink-0 flex items-center cursor-pointer" onClick={() => setActiveTab("home")}>
-              <HungVuongLogo showSlogan={true} size="md" variant="dark" />
-            </div>
-          </div>
+        <div className="flex justify-between items-center h-16">
+          <button
+            onClick={() => setActiveTab("home")}
+            className="flex-shrink-0 flex items-center cursor-pointer"
+          >
+            <HungVuongLogo size="md" />
+          </button>
 
-          {/* Desktop Navigation */}
-          <div className="hidden md:flex items-center gap-1.5">
-            <button
-              id="nav-home"
-              onClick={() => setActiveTab("home")}
-              className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold transition-all ${
-                activeTab === "home"
-                  ? "bg-blue-600/15 text-blue-400 border border-blue-500/20"
-                  : "text-slate-400 hover:bg-slate-900 hover:text-slate-200"
-              }`}
-            >
-              <GraduationCap className="w-4 h-4" />
-              Chương Trình Đào Tạo
-            </button>
+          {/* Điều hướng desktop */}
+          <div className="hidden md:flex items-center gap-1">
+            {TABS.map((tab) => (
+              <button
+                key={tab.id}
+                id={`nav-${tab.id}`}
+                onClick={() => setActiveTab(tab.id)}
+                className={tabClass(activeTab === tab.id)}
+              >
+                <tab.icon className="w-4 h-4" />
+                {tab.label}
+              </button>
+            ))}
 
-            <button
-              id="nav-survey"
-              onClick={() => setActiveTab("survey")}
-              className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold transition-all ${
-                activeTab === "survey"
-                  ? "bg-blue-600/15 text-blue-400 border border-blue-500/20"
-                  : "text-slate-400 hover:bg-slate-900 hover:text-slate-200"
-              }`}
-            >
-              <FileText className="w-4 h-4" />
-              Khảo Sát Phân Lớp
-            </button>
+            <span className="w-px h-5 bg-brand-navy/15 mx-2" />
 
-            <button
-              id="nav-admin"
-              onClick={() => setActiveTab("admin")}
-              className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold transition-all ${
-                activeTab === "admin"
-                  ? "bg-blue-600/15 text-blue-400 border border-blue-500/20"
-                  : "text-slate-400 hover:bg-slate-900 hover:text-slate-200"
-              }`}
-            >
-              <LayoutDashboard className="w-4 h-4" />
-              Quản Trị Lớp Học
-            </button>
-
-            <div className="h-5 w-[1px] bg-slate-800 mx-2" />
-
-            {/* Quyền Giảng viên: TẮT = mở form đăng nhập; BẬT = đăng xuất */}
+            {/* Quyền giảng viên: chưa đăng nhập thì mở form, đã đăng nhập thì thoát */}
             <button
               id="nav-toggle-role"
-              onClick={() => {
-                if (isAdmin) {
-                  onLogout();
-                } else {
-                  setActiveTab("admin");
-                }
-              }}
+              onClick={() => (isAdmin ? onLogout() : setActiveTab("admin"))}
               title={isAdmin ? "Đăng xuất khỏi quyền giảng viên" : "Đăng nhập quyền giảng viên"}
-              className="flex items-center gap-2 px-3 py-1.5 rounded-xl border border-slate-800 bg-slate-900/50 hover:border-slate-700 transition-all text-xs text-slate-400 cursor-pointer"
+              className={`flex items-center gap-2 px-3.5 py-2 rounded-field text-[13px] font-semibold transition-all cursor-pointer ${
+                isAdmin
+                  ? "text-ok-deep bg-gradient-to-b from-[#ECFDF5] to-[#DCFAEE] border border-ok/25"
+                  : "text-ink-3 border border-line hover:border-brand-sky-deep hover:text-brand-navy"
+              }`}
             >
-              <span className="font-mono">Quyền GV:</span>
-              {isAdmin ? (
-                <div className="flex items-center gap-1 text-emerald-400 font-bold">
-                  <span>BẬT</span>
-                  <ToggleRight className="w-5 h-5 text-emerald-400" />
-                </div>
-              ) : (
-                <div className="flex items-center gap-1 text-slate-500 font-medium">
-                  <span>TẮT</span>
-                  <ToggleLeft className="w-5 h-5 text-slate-500" />
-                </div>
-              )}
+              {isAdmin ? <LogOut className="w-4 h-4" /> : <KeyRound className="w-4 h-4" />}
+              {isAdmin ? "Thoát quyền GV" : "Giảng viên"}
             </button>
           </div>
 
-          {/* Mobile menu button */}
-          <div className="flex items-center md:hidden">
-            <button
-              id="nav-mobile-toggle"
-              onClick={() => setIsOpen(!isOpen)}
-              className="inline-flex items-center justify-center p-2 rounded-xl text-slate-400 hover:text-slate-200 hover:bg-slate-900 focus:outline-none"
-            >
-              {isOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
-            </button>
-          </div>
+          {/* Nút menu trên điện thoại */}
+          <button
+            id="nav-mobile-toggle"
+            onClick={() => setIsOpen(!isOpen)}
+            className="md:hidden inline-flex items-center justify-center p-2 rounded-field text-ink-3 hover:text-ink hover:bg-white/70 cursor-pointer"
+            aria-label={isOpen ? "Đóng menu" : "Mở menu"}
+          >
+            {isOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
+          </button>
         </div>
       </div>
 
-      {/* Mobile Menu */}
+      {/* Menu điện thoại */}
       {isOpen && (
-        <div className="md:hidden bg-slate-950 border-b border-slate-800 px-2 pt-2 pb-4 space-y-1">
-          <button
-            id="nav-mobile-home"
-            onClick={() => {
-              setActiveTab("home");
-              setIsOpen(false);
-            }}
-            className={`w-full flex items-center gap-2 px-4 py-3 rounded-xl text-base font-medium ${
-              activeTab === "home" 
-                ? "bg-blue-600/15 text-blue-400 border border-blue-500/20" 
-                : "text-slate-400 hover:bg-slate-900 hover:text-slate-200"
-            }`}
-          >
-            <GraduationCap className="w-5 h-5" />
-            Chương Trình Đào Tạo
-          </button>
-
-          <button
-            id="nav-mobile-survey"
-            onClick={() => {
-              setActiveTab("survey");
-              setIsOpen(false);
-            }}
-            className={`w-full flex items-center gap-2 px-4 py-3 rounded-xl text-base font-medium ${
-              activeTab === "survey" 
-                ? "bg-blue-600/15 text-blue-400 border border-blue-500/20" 
-                : "text-slate-400 hover:bg-slate-900 hover:text-slate-200"
-            }`}
-          >
-            <FileText className="w-5 h-5" />
-            Khảo Sát Phân Lớp
-          </button>
-
-          <button
-            id="nav-mobile-admin"
-            onClick={() => {
-              setActiveTab("admin");
-              setIsOpen(false);
-            }}
-            className={`w-full flex items-center gap-2 px-4 py-3 rounded-xl text-base font-medium ${
-              activeTab === "admin" 
-                ? "bg-blue-600/15 text-blue-400 border border-blue-500/20" 
-                : "text-slate-400 hover:bg-slate-900 hover:text-slate-200"
-            }`}
-          >
-            <LayoutDashboard className="w-5 h-5" />
-            Quản Trị Lớp Học
-          </button>
-
-          <div className="h-[1px] bg-slate-800 my-2 mx-4" />
-
-          <div className="px-4 py-2 flex items-center justify-between">
-            <span className="text-sm font-medium text-slate-400">Quyền Giảng viên:</span>
+        <div className="md:hidden bg-white/95 backdrop-blur-[14px] border-b border-brand-navy/15 px-3 pt-2 pb-4 space-y-1">
+          {TABS.map((tab) => (
             <button
-              id="nav-mobile-toggle-role"
+              key={tab.id}
+              id={`nav-mobile-${tab.id}`}
               onClick={() => {
-                if (isAdmin) {
-                  onLogout();
-                } else {
-                  setActiveTab("admin");
-                }
+                setActiveTab(tab.id);
                 setIsOpen(false);
               }}
-              className="flex items-center gap-1.5"
+              className={`w-full ${tabClass(activeTab === tab.id)} py-3 text-[15px]`}
             >
-              {isAdmin ? (
-                <span className="text-emerald-400 font-bold text-sm flex items-center gap-1">
-                  Đang Bật <ToggleRight className="w-6 h-6 text-emerald-400" />
-                </span>
-              ) : (
-                <span className="text-slate-500 text-sm flex items-center gap-1">
-                  Đang Tắt <ToggleLeft className="w-6 h-6 text-slate-500" />
-                </span>
-              )}
+              <tab.icon className="w-5 h-5" />
+              {tab.label}
             </button>
-          </div>
+          ))}
+
+          <div className="h-px bg-line-soft my-2 mx-2" />
+
+          <button
+            id="nav-mobile-toggle-role"
+            onClick={() => {
+              isAdmin ? onLogout() : setActiveTab("admin");
+              setIsOpen(false);
+            }}
+            className={`w-full flex items-center gap-2 px-4 py-3 rounded-field text-[15px] font-semibold cursor-pointer ${
+              isAdmin ? "text-ok-deep bg-gradient-to-b from-[#ECFDF5] to-[#DCFAEE]" : "text-ink-3"
+            }`}
+          >
+            {isAdmin ? <LogOut className="w-5 h-5" /> : <KeyRound className="w-5 h-5" />}
+            {isAdmin ? "Thoát quyền giảng viên" : "Đăng nhập giảng viên"}
+          </button>
         </div>
       )}
     </nav>

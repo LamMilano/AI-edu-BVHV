@@ -5,47 +5,54 @@ interface HungVuongLogoProps {
   showSlogan?: boolean;
   className?: string;
   size?: "sm" | "md" | "lg";
-  variant?: "light" | "dark";
+  /** `compact` bỏ tên đầy đủ, chỉ giữ dấu hiệu — dùng cho thanh nav chật. */
+  variant?: "default" | "compact";
 }
 
 /**
- * Official BỆNH VIỆN ĐA KHOA HÙNG VƯƠNG mark.
- * Uses the real logo image alongside the brand typography.
+ * Dấu hiệu chính thức BỆNH VIỆN ĐA KHOA HÙNG VƯƠNG.
+ *
+ * Slogan mặc định tắt: thanh nav cao 64px không đủ chỗ cho cả logo,
+ * tên đầy đủ và slogan. Slogan sống ở footer, nơi nó có chỗ thở.
  */
 export default function HungVuongLogo({
-  showSlogan = true,
+  showSlogan = false,
   className = "",
   size = "md",
-  variant = "light",
+  variant = "default",
 }: HungVuongLogoProps) {
   const sizeClasses = {
-    sm: "w-9 h-9",
-    md: "w-11 h-11",
-    lg: "w-16 h-16",
+    sm: "w-8 h-8",
+    md: "w-10 h-10",
+    lg: "w-14 h-14",
   };
 
-  const isDark = variant === "dark";
-
   return (
-    <div className={`flex items-center gap-3 ${className}`}>
+    <div className={`flex items-center gap-2.5 ${className}`}>
       <div className={`flex-shrink-0 ${sizeClasses[size]}`}>
         <img
           src={hvLogo}
           alt="Logo Bệnh viện Đa khoa Hùng Vương"
           draggable={false}
-          className="w-full h-full object-contain rounded-md select-none drop-shadow-sm"
+          className="w-full h-full object-contain rounded-md select-none"
         />
       </div>
 
-      {/* Brand typography */}
-      <div className="flex flex-col text-left leading-none">
-        <h2 className="font-sans font-black tracking-tight text-sm sm:text-base uppercase">
-          <span className={`${isDark ? "text-blue-400" : "text-blue-700"} block sm:inline`}>BỆNH VIỆN ĐA KHOA</span>{" "}
-          <span className={`${isDark ? "text-white" : "text-slate-900"} block sm:inline`}>HÙNG VƯƠNG</span>
+      <div className="flex flex-col text-left leading-tight">
+        <h2 className="font-extrabold tracking-tight text-[12.5px] sm:text-[13px] uppercase text-ink">
+          BỆNH VIỆN ĐA KHOA{" "}
+          <span className="text-brand-navy">HÙNG VƯƠNG</span>
         </h2>
+
+        {variant === "default" && (
+          <span className="text-[10.5px] text-ink-4 mt-0.5">
+            Đào tạo AI nội bộ
+          </span>
+        )}
+
         {showSlogan && (
-          <span className={`font-serif italic text-[10px] sm:text-xs font-semibold mt-1 tracking-wide ${isDark ? "text-red-400" : "text-red-500"}`}>
-            Thân thiện - Chuyên nghiệp - Chu đáo
+          <span className="text-[11px] text-ink-3 mt-1 tracking-wide">
+            Thân thiện · Chuyên nghiệp · Chu đáo
           </span>
         )}
       </div>
