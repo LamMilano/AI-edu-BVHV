@@ -155,7 +155,7 @@ function OtherInput({ id, name, show, value, onChange }: {
 }
 
 function TextField({ id, name, label, placeholder, Icon, type = "text", value, error, onChange }: {
-  id: string; name: string; label: string; placeholder: string; Icon: any; type?: string;
+  id: string; name: string; label: string; placeholder?: string; Icon: any; type?: string;
   value: string; error?: string;
   onChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
 }) {
@@ -517,7 +517,7 @@ export default function SurveyForm({ onSuccess }: SurveyFormProps) {
                 value={formData.studentName} error={errors.studentName} onChange={handleChange} />
               <DepartmentField id="input-dept" label="Khoa / Phòng / Ban"
                 value={formData.department} error={errors.department} onChange={handleDepartmentChange} />
-              <TextField id="input-email" name="email" label="Địa chỉ email" placeholder="nhanvien@benhvien.com" Icon={Mail} type="email"
+              <TextField id="input-email" name="email" label="Địa chỉ email" Icon={Mail} type="email"
                 value={formData.email} error={errors.email} onChange={handleChange} />
               <TextField id="input-phone" name="phone" label="SĐT / Zalo" placeholder="0901234567" Icon={Phone}
                 value={formData.phone} error={errors.phone} onChange={handleChange} />
