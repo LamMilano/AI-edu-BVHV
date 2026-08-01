@@ -3,9 +3,11 @@ import { collection, addDoc, serverTimestamp } from "firebase/firestore";
 import { db } from "../lib/firebase";
 import { SurveySubmission } from "../types";
 import {
-  User, Mail, Phone, Building2, Check, Send, CheckCircle2,
+  User, Mail, Phone, Check, Send, CheckCircle2,
   ChevronRight, ChevronLeft, AlertCircle
 } from "lucide-react";
+import DepartmentField from "./DepartmentField";
+import { isValidDepartment } from "../lib/departments";
 
 interface SurveyFormProps {
   onSuccess: () => void;
@@ -248,6 +250,13 @@ export default function SurveyForm({ onSuccess }: SurveyFormProps) {
     }
   };
 
+  const handleDepartmentChange = (value: string) => {
+    setFormData(prev => ({ ...prev, department: value }));
+    if (errors.department) {
+      setErrors(prev => ({ ...prev, department: "" }));
+    }
+  };
+
   const handleCheckboxChange = (name: MultiField, option: string) => {
     setFormData(prev => {
       const current = prev[name] as string[];
@@ -335,7 +344,11 @@ export default function SurveyForm({ onSuccess }: SurveyFormProps) {
   const validateStep1 = () => {
     const newErrors: Record<string, string> = {};
     if (!formData.studentName.trim()) newErrors.studentName = "Vui lòng nhập họ và tên";
-    if (!formData.department.trim()) newErrors.department = "Vui lòng nhập khoa/phòng làm việc";
+    // Chỉ nhận tên nằm trong danh mục chuẩn — thống kê theo khoa mới gộp đúng.
+    if (!formData.department.trim()) newErrors.department = "Vui lòng chọn khoa/phòng làm việc";
+    else if (!isValidDepartment(formData.department)) {
+      newErrors.department = "Vui lòng chọn một khoa/phòng có trong danh sách";
+    }
     if (!formData.email.trim() || !formData.email.includes("@")) newErrors.email = "Vui lòng nhập email hợp lệ";
     if (!formData.phone.trim()) newErrors.phone = "Vui lòng nhập số điện thoại hoặc Zalo";
 
@@ -502,8 +515,8 @@ export default function SurveyForm({ onSuccess }: SurveyFormProps) {
             <div className="grid sm:grid-cols-2 gap-4 mt-6">
               <TextField id="input-name" name="studentName" label="Họ và tên" placeholder="Nguyễn Văn A" Icon={User}
                 value={formData.studentName} error={errors.studentName} onChange={handleChange} />
-              <TextField id="input-dept" name="department" label="Khoa / Phòng / Ban" placeholder="Khoa Khám bệnh" Icon={Building2}
-                value={formData.department} error={errors.department} onChange={handleChange} />
+              <DepartmentField id="input-dept" label="Khoa / Phòng / Ban"
+                value={formData.department} error={errors.department} onChange={handleDepartmentChange} />
               <TextField id="input-email" name="email" label="Địa chỉ email" placeholder="nhanvien@benhvien.com" Icon={Mail} type="email"
                 value={formData.email} error={errors.email} onChange={handleChange} />
               <TextField id="input-phone" name="phone" label="SĐT / Zalo" placeholder="0901234567" Icon={Phone}
