@@ -1,8 +1,11 @@
 import React, { useState } from "react";
 import { ShieldAlert, Briefcase, Zap, ArrowRight } from "lucide-react";
+import { SurveySubmission } from "../types";
+import StudentStats from "./StudentStats";
 
 interface HomePortalProps {
   onStartSurvey: () => void;
+  submissions: SurveySubmission[];
 }
 
 type Level = "L1" | "L2" | "L3";
@@ -93,7 +96,7 @@ const PRINCIPLES = [
   },
 ];
 
-export default function HomePortal({ onStartSurvey }: HomePortalProps) {
+export default function HomePortal({ onStartSurvey, submissions }: HomePortalProps) {
   const [selectedLevel, setSelectedLevel] = useState<Level>("L1");
 
   const openAgenda = (lvl: Level) => {
@@ -134,6 +137,17 @@ export default function HomePortal({ onStartSurvey }: HomePortalProps) {
           >
             Xem lịch học
           </a>
+        </div>
+
+        {/* ══ THÔNG TIN HỌC VIÊN — đặt ngay dưới nút đăng ký để người xem thấy
+            ai đã tham gia trước khi quyết định. Chỉ số liệu tổng hợp, không có
+            tên/liên hệ của ai. Dùng chung component với bảng Quản trị. ══ */}
+        <div className="mt-10 space-y-4">
+          <div className="flex items-baseline justify-between gap-4">
+            <h2 className="text-[15px] font-extrabold tracking-tight">Thông tin học viên</h2>
+            <span className="text-[12.5px] text-ink-3">Tổng hợp từ các khảo sát đã gửi</span>
+          </div>
+          <StudentStats submissions={submissions} />
         </div>
 
         {/* Ba con số thật — thay cho widget trạng thái hệ thống hiển thị dữ liệu cứng */}

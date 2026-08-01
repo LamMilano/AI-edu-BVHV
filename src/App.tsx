@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { collection, getDocs, query, orderBy } from "firebase/firestore";
 import { db } from "./lib/firebase";
-import { seedInitialData } from "./lib/seed";
 import { SurveySubmission, Announcement, ClassSession } from "./types";
 import Navigation from "./components/Navigation";
 import HomePortal from "./components/HomePortal";
@@ -34,10 +33,12 @@ export default function App() {
   const loadFirestoreData = async () => {
     setLoading(true);
     try {
-      // 1. Seed if empty
-      await seedInitialData();
+      /* KHÔNG tự seed dữ liệu mẫu ở đây. Trước kia hàm này gọi seedInitialData(),
+         mà seed lại chạy mỗi lần tải trang và mỗi lần refresh sau khi xoá — nên
+         xoá hết lớp/thông báo là chúng lập tức được tạo lại. Muốn nạp lại dữ liệu
+         mẫu thì gọi seedInitialData() trong src/lib/seed.ts một cách chủ động. */
 
-      // 2. Fetch Announcements (ordered by createdAt descending)
+      // 1. Fetch Announcements (ordered by createdAt descending)
       const annQuery = query(collection(db, "announcements"), orderBy("createdAt", "desc"));
       const annSnap = await getDocs(annQuery);
       const annList = annSnap.docs.map(doc => ({
@@ -148,6 +149,7 @@ export default function App() {
             {activeTab === "home" && (
               <HomePortal
                 onStartSurvey={() => setActiveTab("survey")}
+                submissions={submissions}
               />
             )}
 
