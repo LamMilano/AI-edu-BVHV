@@ -18,6 +18,41 @@ interface AdminDashboardProps {
   onRefreshData: () => void;
 }
 
+/* ── Mảnh giao diện cho phiếu chi tiết học viên ─────────────── */
+
+/** Một mục trả lời: nhãn nhỏ in hoa + nội dung. */
+function AnswerItem({ label, value, wide }: {
+  label: string; value: string; wide?: boolean;
+}) {
+  return (
+    <div className={wide ? "sm:col-span-2" : ""}>
+      <span className="text-[10.5px] font-extrabold text-ink-4 uppercase tracking-[0.09em] block mb-1.5">
+        {label}
+      </span>
+      <p className="text-[13.5px] text-ink-2 leading-relaxed">{value}</p>
+    </div>
+  );
+}
+
+/** Tiêu đề một trang khảo sát trong phiếu chi tiết. */
+function AnswerSection({ step, title, children }: {
+  step: string; title: string; children: React.ReactNode;
+}) {
+  return (
+    <div className="pt-5 border-t border-line-soft">
+      <div className="flex items-baseline gap-2.5 mb-4">
+        <span className="text-[10.5px] font-extrabold uppercase tracking-[0.09em] text-ink-4">{step}</span>
+        <h5 className="text-[15px] font-extrabold tracking-[-0.02em]">{title}</h5>
+      </div>
+      <div className="grid sm:grid-cols-2 gap-x-6 gap-y-5">{children}</div>
+    </div>
+  );
+}
+
+/** Gộp đáp án nhiều lựa chọn (kèm ô "Khác") thành một dòng chữ. */
+const listAnswer = (items: string[] | undefined, fallback: string, other?: string) =>
+  [...(items || []), other].filter(Boolean).join(", ") || fallback;
+
 export default function AdminDashboard({ submissions, announcements, classes, onRefreshData }: AdminDashboardProps) {
   // Navigation tabs within Admin Panel
   const [adminSubTab, setAdminSubTab] = useState<"students" | "classes" | "announcements">("students");
@@ -344,57 +379,92 @@ export default function AdminDashboard({ submissions, announcements, classes, on
                 </button>
               </div>
 
-              <div className="grid sm:grid-cols-3 gap-6">
+              <div className="grid sm:grid-cols-2 gap-x-6 gap-y-5">
                 <div>
                   <span className="text-[10.5px] font-extrabold text-ink-4 uppercase tracking-[0.09em] block">Liên hệ</span>
-                  <div className="mt-2.5 space-y-1.5 text-[13.5px] text-ink-2">
+                  <div className="mt-1.5 space-y-1 text-[13.5px] text-ink-2">
                     <p className="tnum">{selectedSubmission.phone}</p>
                     <p className="break-all">{selectedSubmission.email}</p>
-                    <p>
-                      {LEVEL_LABEL[selectedSubmission.assignedLevel]} ·{" "}
-                      <span className="tnum font-semibold">{selectedSubmission.score}/100</span>
-                    </p>
                   </div>
                 </div>
 
-                <div className="sm:col-span-2">
-                  <span className="text-[10.5px] font-extrabold text-ink-4 uppercase tracking-[0.09em] block">
-                    Công việc lặp lại muốn cải thiện bằng AI
-                  </span>
-                  <p className="mt-2.5 text-[13.5px] text-ink-2 leading-relaxed rounded-r-[6px] border-l-[3px] border-brand-sky-deep bg-gradient-to-br from-brand-sky/12 to-brand-sky/4 px-3.5 py-3">
-                    {selectedSubmission.answers.q9_repetitive_tasks || "Không cung cấp mô tả"}
+                <div>
+                  <span className="text-[10.5px] font-extrabold text-ink-4 uppercase tracking-[0.09em] block">Kết quả xếp lớp</span>
+                  <p className="mt-1.5 text-[13.5px] text-ink-2">
+                    {LEVEL_LABEL[selectedSubmission.assignedLevel]} ·{" "}
+                    <span className="tnum font-semibold">{selectedSubmission.score}/100</span>
                   </p>
                 </div>
               </div>
 
-              <div className="pt-4 border-t border-line-soft grid sm:grid-cols-2 gap-5">
-                <div>
-                  <span className="text-[10.5px] font-extrabold text-ink-4 uppercase tracking-[0.09em] block mb-1.5">Công cụ đã dùng</span>
-                  <p className="text-[13.5px] text-ink-2">
-                    {[
-                      ...(selectedSubmission.answers.q1_tools || []),
-                      selectedSubmission.answers.q1_tools_other,
-                    ].filter(Boolean).join(", ") || "Chưa dùng bao giờ"}
+              {/* ── Trang 2 của phiếu: kinh nghiệm AI (câu 1–5) ── */}
+              <AnswerSection step="Trang 2" title="Bạn đã dùng AI đến đâu?">
+                <AnswerItem
+                  label="1. Công cụ AI đã dùng"
+                  value={listAnswer(
+                    selectedSubmission.answers.q1_tools,
+                    "Chưa dùng bao giờ",
+                    selectedSubmission.answers.q1_tools_other
+                  )}
+                />
+                <AnswerItem
+                  label="2. Bản trả phí đang dùng"
+                  value={listAnswer(
+                    selectedSubmission.answers.q2_paid,
+                    "Chưa trả phí cho công cụ nào",
+                    selectedSubmission.answers.q2_paid_other
+                  )}
+                />
+                <AnswerItem
+                  label="3. Tần suất dùng AI cho công việc"
+                  value={selectedSubmission.answers.q3_frequency || "Chưa trả lời"}
+                />
+                <AnswerItem
+                  label="4. Việc đã từng làm bằng AI"
+                  value={listAnswer(selectedSubmission.answers.q4_past_tasks, "Chưa làm việc nào")}
+                />
+                <AnswerItem
+                  label="5. Khái niệm đã biết"
+                  value={listAnswer(selectedSubmission.answers.q5_concepts, "Chưa biết khái niệm nào")}
+                  wide
+                />
+              </AnswerSection>
+
+              {/* ── Trang 3 của phiếu: mục tiêu và lịch học (câu 7–12) ── */}
+              <AnswerSection step="Trang 3" title="Bạn muốn đạt được gì?">
+                <AnswerItem
+                  label="7. Mong muốn học nhất"
+                  value={listAnswer(selectedSubmission.answers.q7_goals, "Chưa chọn")}
+                  wide
+                />
+                <AnswerItem
+                  label="8. Định hướng"
+                  value={selectedSubmission.answers.q8_orientation || "Chưa trả lời"}
+                  wide
+                />
+
+                <div className="sm:col-span-2">
+                  <span className="text-[10.5px] font-extrabold text-ink-4 uppercase tracking-[0.09em] block">
+                    9. Công việc lặp lại muốn cải thiện bằng AI
+                  </span>
+                  <p className="mt-2 text-[13.5px] text-ink-2 leading-relaxed rounded-r-[6px] border-l-[3px] border-brand-sky-deep bg-gradient-to-br from-brand-sky/12 to-brand-sky/4 px-3.5 py-3">
+                    {selectedSubmission.answers.q9_repetitive_tasks || "Không cung cấp mô tả"}
                   </p>
                 </div>
-                <div>
-                  <span className="text-[10.5px] font-extrabold text-ink-4 uppercase tracking-[0.09em] block mb-1.5">Bản trả phí đang dùng</span>
-                  <p className="text-[13.5px] text-ink-2">
-                    {[
-                      ...(selectedSubmission.answers.q2_paid || []),
-                      selectedSubmission.answers.q2_paid_other,
-                    ].filter(Boolean).join(", ") || "Chưa trả phí cho công cụ nào"}
-                  </p>
-                </div>
-                <div>
-                  <span className="text-[10.5px] font-extrabold text-ink-4 uppercase tracking-[0.09em] block mb-1.5">Khái niệm đã biết</span>
-                  <p className="text-[13.5px] text-ink-2">{(selectedSubmission.answers.q5_concepts || []).join(", ") || "Chưa biết khái niệm nào"}</p>
-                </div>
-                <div>
-                  <span className="text-[10.5px] font-extrabold text-ink-4 uppercase tracking-[0.09em] block mb-1.5">Việc đã từng làm bằng AI</span>
-                  <p className="text-[13.5px] text-ink-2">{(selectedSubmission.answers.q4_past_tasks || []).join(", ") || "Chưa làm việc nào"}</p>
-                </div>
-              </div>
+
+                <AnswerItem
+                  label="10. Khung giờ thuận tiện"
+                  value={listAnswer(selectedSubmission.answers.q10_timeframe, "Chưa chọn")}
+                />
+                <AnswerItem
+                  label="11. Ngày trong tuần thuận tiện"
+                  value={listAnswer(selectedSubmission.answers.q11_days, "Chưa chọn")}
+                />
+                <AnswerItem
+                  label="12. Thời lượng buổi phù hợp"
+                  value={selectedSubmission.answers.q12_duration || "Chưa chọn"}
+                />
+              </AnswerSection>
             </div>
           )}
         </div>
