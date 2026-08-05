@@ -5,10 +5,13 @@ import {
 import { db } from "../lib/firebase";
 import { SurveySubmission, Announcement, ClassSession } from "../types";
 import { LEVEL_RAMP, LEVEL_LABEL } from "../lib/levels";
+import { formatDateVN, formatTimeVN } from "../lib/datetime";
+import { useStudentFilters } from "../hooks/useStudentFilters";
 import StudentStats from "./StudentStats";
+import StudentFilterBar from "./StudentFilterBar";
 import {
   LayoutDashboard, Users, FileText, Calendar, BellRing, Plus,
-  Trash2, Pencil, X, Search, ArrowUpDown, ChevronDown, CheckCircle2, ShieldAlert, Sparkles, BookOpen
+  Trash2, Pencil, X, ArrowUpDown, ChevronDown, CheckCircle2, ShieldAlert, Sparkles, BookOpen
 } from "lucide-react";
 
 interface AdminDashboardProps {
@@ -76,9 +79,8 @@ export default function AdminDashboard({ submissions, announcements, classes, on
     category: "general" as "important" | "schedule" | "general"
   });
 
-  // Filters & Searches for Student List
-  const [searchTerm, setSearchTerm] = useState("");
-  const [levelFilter, setLevelFilter] = useState<"ALL" | "L1" | "L2" | "L3">("ALL");
+  // Lọc & sắp xếp danh sách học viên (logic nằm ở src/hooks/useStudentFilters.ts)
+  const studentFilters = useStudentFilters(submissions);
   const [selectedSubmission, setSelectedSubmission] = useState<SurveySubmission | null>(null);
 
   // loading / action indicators
@@ -206,16 +208,7 @@ export default function AdminDashboard({ submissions, announcements, classes, on
     }
   };
 
-  // Filter Submissions
-  const filteredSubmissions = submissions.filter(s => {
-    const matchesSearch = 
-      s.studentName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      s.department.toLowerCase().includes(searchTerm.toLowerCase());
-    
-    const matchesLevel = levelFilter === "ALL" || s.assignedLevel === levelFilter;
-    
-    return matchesSearch && matchesLevel;
-  });
+  const filteredSubmissions = studentFilters.filtered;
 
   return (
     <div className="space-y-8">
@@ -262,47 +255,19 @@ export default function AdminDashboard({ submissions, announcements, classes, on
       {adminSubTab === "students" && (
         <div className="space-y-4">
           <div className="surface p-5 space-y-4">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-              <div className="relative flex-1 max-w-sm">
-                <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-ink-4 pointer-events-none" />
-                <input
-                  id="search-students"
-                  type="text"
-                  placeholder="Tìm theo tên hoặc khoa…"
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="field w-full pl-10 pr-4 py-2.5 text-[14px]"
-                />
-              </div>
-
-              {/* Lọc cấp độ dạng nút gạt — nhanh hơn thả xuống khi chỉ có 4 lựa chọn */}
-              <div className="inline-flex self-start rounded-field p-[3px] gap-0.5 bg-gradient-to-b from-[#EDF3FA] to-[#E1EAF4]">
-                {(["ALL", "L1", "L2", "L3"] as const).map((lv) => (
-                  <button
-                    key={lv}
-                    id={`filter-level-${lv}`}
-                    onClick={() => setLevelFilter(lv)}
-                    className={`px-3.5 py-1.5 rounded-[6px] text-[12.5px] font-bold transition-all cursor-pointer ${
-                      levelFilter === lv
-                        ? "bg-white text-brand-navy shadow-[0_2px_5px_-2px_rgb(20_51_110/0.3)]"
-                        : "text-ink-3 hover:text-ink"
-                    }`}
-                  >
-                    {lv === "ALL" ? "Tất cả" : LEVEL_LABEL[lv].replace("Cấp độ ", "C")}
-                  </button>
-                ))}
-              </div>
-            </div>
+            <StudentFilterBar {...studentFilters} />
 
             {/* Submissions Table */}
             <div className="overflow-x-auto border border-line-soft rounded-field">
               <table className="w-full text-left border-collapse">
                 <thead>
                   <tr className="bg-gradient-to-b from-[#F4F8FC] to-[#EAF1F8] text-[10px] font-bold text-ink-3 uppercase tracking-wider border-b border-line-soft">
+                    <th className="px-4 py-3 w-12">STT</th>
                     <th className="px-4 py-3">Học viên</th>
                     <th className="px-4 py-3">Khoa / Phòng</th>
                     <th className="px-4 py-3">Điểm số</th>
                     <th className="px-4 py-3">Xếp lớp đề xuất</th>
+                    <th className="px-4 py-3">Thời gian đăng ký</th>
                     <th className="px-4 py-3">Liên hệ</th>
                     <th className="px-4 py-3 text-right">Thao tác</th>
                   </tr>
@@ -310,13 +275,27 @@ export default function AdminDashboard({ submissions, announcements, classes, on
                 <tbody className="divide-y divide-line-soft text-xs">
                   {filteredSubmissions.length === 0 ? (
                     <tr>
-                      <td colSpan={6} className="text-center py-10 text-ink-4 italic">
-                        Không tìm thấy thông tin đăng ký khảo sát nào.
+                      <td colSpan={8} className="text-center py-10 text-ink-4">
+                        {studentFilters.isFiltered ? (
+                          <span className="inline-flex items-center gap-2">
+                            <span className="italic">Không có học viên nào khớp bộ lọc.</span>
+                            <button
+                              id="btn-reset-filters-empty"
+                              onClick={studentFilters.resetAll}
+                              className="font-bold text-brand-navy hover:text-brand-sky-deep transition-colors cursor-pointer not-italic"
+                            >
+                              Xóa lọc
+                            </button>
+                          </span>
+                        ) : (
+                          <span className="italic">Không tìm thấy thông tin đăng ký khảo sát nào.</span>
+                        )}
                       </td>
                     </tr>
                   ) : (
-                    filteredSubmissions.map((sub) => (
+                    filteredSubmissions.map((sub, index) => (
                       <tr key={sub.id} className="hover:bg-[#F6FAFD] transition-colors">
+                        <td className="px-4 py-4.5 tnum text-ink-4">{index + 1}</td>
                         <td className="px-4 py-4.5 font-bold text-ink">{sub.studentName}</td>
                         <td className="px-4 py-4.5 text-ink-3">{sub.department}</td>
                         <td className="px-4 py-4.5 tnum font-bold text-ink-2">{sub.score} / 100</td>
@@ -328,6 +307,12 @@ export default function AdminDashboard({ submissions, announcements, classes, on
                           >
                             {LEVEL_LABEL[sub.assignedLevel]}
                           </span>
+                        </td>
+                        <td className="px-4 py-4.5">
+                          <div className="space-y-0.5">
+                            <span className="block text-ink-3 tnum">{formatDateVN(sub.submittedAt)}</span>
+                            <span className="block text-[10px] text-ink-4 tnum">{formatTimeVN(sub.submittedAt)}</span>
+                          </div>
                         </td>
                         <td className="px-4 py-4.5">
                           <div className="space-y-0.5">
