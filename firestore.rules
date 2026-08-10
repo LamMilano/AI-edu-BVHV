@@ -1,14 +1,72 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    match /survey_submissions/{document} {
-      allow read, write: if true;
+
+    // Vai trò đọc từ users/{uid}. Dùng exists() trước get() vì get() trên
+    // document không tồn tại sẽ làm cả biểu thức lỗi thay vì trả về false.
+    function roleOf() {
+      return request.auth != null
+        && exists(/databases/$(database)/documents/users/$(request.auth.uid))
+        ? get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role
+        : '';
     }
-    match /announcements/{document} {
-      allow read, write: if true;
+    function isAdmin() {
+      return roleOf() == 'admin';
     }
-    match /classes/{document} {
-      allow read, write: if true;
+    function isStaff() {
+      return roleOf() == 'admin' || roleOf() == 'teacher';
+    }
+
+    // Vai trò chỉ được cấp bằng tay trên Firebase Console. Nếu client ghi
+    // được vào đây thì bất kỳ ai cũng tự phong mình làm admin.
+    match /users/{uid} {
+      allow read: if request.auth != null && request.auth.uid == uid;
+      allow write: if false;
+    }
+
+    // Khách vãng lai nộp được phiếu nhưng không đọc được phiếu của người khác.
+    match /survey_submissions/{id} {
+      allow create: if true;
+      allow read: if isStaff();
+      allow update, delete: if isAdmin();
+    }
+
+    match /announcements/{id} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    // Chỉ chứa số đã tổng hợp, không có thông tin định danh — an toàn để công khai.
+    match /public_stats/{id} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    match /students/{id} {
+      allow read: if isStaff();
+      allow write: if isAdmin();
+    }
+
+    match /classes/{id} {
+      allow read: if isStaff();
+      allow write: if isAdmin();
+    }
+
+    match /enrollments/{id} {
+      allow read: if isStaff();
+      allow write: if isAdmin();
+    }
+
+    // Giảng viên điểm danh được nhưng không xóa được buổi học.
+    match /sessions/{id} {
+      allow read: if isStaff();
+      allow create, update: if isStaff();
+      allow delete: if isAdmin();
+    }
+
+    // Bất cứ thứ gì chưa khai báo ở trên đều bị từ chối.
+    match /{document=**} {
+      allow read, write: if false;
     }
   }
 }
