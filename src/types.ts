@@ -46,6 +46,49 @@ export interface ClassSession {
   studentsCount: number;
 }
 
+export interface StudentAvailability {
+  timeframes: string[];   // từ q10_timeframe
+  days: string[];         // từ q11_days
+  duration: string;       // từ q12_duration
+}
+
+/* Hồ sơ học viên: BẢN CHIẾU của phiếu khảo sát, không phải bản gốc.
+   survey_submissions vẫn là nguồn sự thật cho câu trả lời; hồ sơ chỉ giữ
+   phần cần cho vận hành (xếp lớp, điểm danh). Document ID = email chuẩn hóa. */
+export interface Student {
+  id?: string;
+  email: string;              // bản gốc như học viên gõ
+  fullName: string;
+  department: string;
+  phone: string;
+  currentLevel: "L1" | "L2" | "L3";
+  latestSubmissionId: string;
+  submissionCount: number;    // >1 nghĩa là đã làm lại khảo sát
+  availability: StudentAvailability;
+  notDuplicateOf: string[];   // id các hồ sơ đã xác nhận "không phải trùng"
+  mergedFrom: string[];       // id các hồ sơ đã gộp vào đây
+  createdAt: any;
+  updatedAt: any;
+}
+
+/* Hồ sơ dựng từ phiếu, chưa có mốc thời gian của Firestore và chưa có
+   những trường do giáo vụ quyết định. */
+export type StudentDraft =
+  Omit<Student, "createdAt" | "updatedAt" | "notDuplicateOf" | "mergedFrom"> & { id: string };
+
+export interface SkippedSubmission {
+  submissionId: string;
+  studentName: string;
+  reason: string;
+}
+
+export interface DuplicateGroup {
+  key: string;
+  fullName: string;
+  department: string;
+  students: Student[];   // luôn ≥ 2
+}
+
 /* Số liệu tổng hợp cho trang chủ. Khách vãng lai không có quyền đọc
    survey_submissions sau khi siết rules, nên trang chủ đọc document
    public_stats/summary thay vì tự đếm từ dữ liệu thô. */
