@@ -1,4 +1,6 @@
-import { SurveySubmission, StudentDraft, SkippedSubmission } from "../types";
+import {
+  SurveySubmission, Student, StudentDraft, SkippedSubmission, DuplicateGroup,
+} from "../types";
 
 /* Giới hạn của Firestore Document ID: không chứa '/', không phải '.' hay '..',
    tối đa 1500 byte UTF-8. Email hợp lệ không vi phạm những điều này, nhưng dữ
@@ -71,4 +73,49 @@ export function buildStudentsFromSubmissions(
   }));
 
   return { drafts, skipped };
+}
+
+/* Một cặp coi như đã xử lý nếu BẤT KỲ bên nào đánh dấu bên kia là không trùng —
+   giáo vụ đã quyết một lần rồi thì đừng hỏi lại từ phía còn lại. */
+function pairDismissed(a: Student, b: Student): boolean {
+  return (a.notDuplicateOf || []).includes(b.id || "")
+    || (b.notDuplicateOf || []).includes(a.id || "");
+}
+
+/* Nghi trùng = cùng tên + cùng khoa/phòng nhưng khác email. Chỉ gợi ý cho
+   giáo vụ xem lại, không bao giờ tự gộp: hai người trùng tên trong cùng một
+   khoa là chuyện có thật. */
+export function findDuplicateGroups(students: Student[]): DuplicateGroup[] {
+  const buckets = new Map<string, Student[]>();
+
+  for (const s of students) {
+    const name = normalizeName(s.fullName);
+    const dept = normalizeName(s.department);
+    if (!name || !dept) continue;   // thiếu một trong hai thì không đủ căn cứ
+    const key = `${name}|${dept}`;
+    buckets.set(key, [...(buckets.get(key) || []), s]);
+  }
+
+  const groups: DuplicateGroup[] = [];
+  for (const [key, members] of buckets) {
+    if (members.length < 2) continue;
+
+    // Còn ít nhất một cặp chưa được giáo vụ xử lý thì mới đáng báo.
+    let hasOpenPair = false;
+    for (let i = 0; i < members.length && !hasOpenPair; i++) {
+      for (let j = i + 1; j < members.length; j++) {
+        if (!pairDismissed(members[i], members[j])) { hasOpenPair = true; break; }
+      }
+    }
+    if (!hasOpenPair) continue;
+
+    groups.push({
+      key,
+      fullName: members[0].fullName,
+      department: members[0].department,
+      students: members,
+    });
+  }
+
+  return groups.sort((a, b) => a.fullName.localeCompare(b.fullName, "vi"));
 }

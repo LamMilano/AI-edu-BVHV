@@ -1,6 +1,24 @@
 import { describe, it, expect } from "vitest";
-import { normalizeEmail, normalizeName, buildStudentsFromSubmissions } from "./students";
-import { SurveySubmission } from "../types";
+import {
+  normalizeEmail, normalizeName, buildStudentsFromSubmissions, findDuplicateGroups,
+} from "./students";
+import { SurveySubmission, Student } from "../types";
+
+const stu = (over: Partial<Student> & { id: string }): Student => ({
+  email: over.id,
+  fullName: "Nguyễn Văn A",
+  department: "Khoa Nội",
+  phone: "",
+  currentLevel: "L1",
+  latestSubmissionId: "",
+  submissionCount: 1,
+  availability: { timeframes: [], days: [], duration: "" },
+  notDuplicateOf: [],
+  mergedFrom: [],
+  createdAt: null,
+  updatedAt: null,
+  ...over,
+} as Student);
 
 const sub = (over: Partial<SurveySubmission> & { id: string }): SurveySubmission => ({
   studentName: "Nguyễn Văn A",
@@ -114,5 +132,62 @@ describe("buildStudentsFromSubmissions", () => {
       sub({ id: "moi", assignedLevel: "L3", submittedAt: { seconds: 900, nanoseconds: 0 } }),
     ]);
     expect(drafts[0].currentLevel).toBe("L3");
+  });
+});
+
+describe("findDuplicateGroups", () => {
+  it("gom hai hồ sơ cùng tên cùng khoa nhưng khác email", () => {
+    const groups = findDuplicateGroups([stu({ id: "a@x.vn" }), stu({ id: "b@x.vn" })]);
+    expect(groups).toHaveLength(1);
+    expect(groups[0].students.map(s => s.id).sort()).toEqual(["a@x.vn", "b@x.vn"]);
+  });
+
+  it("không gom khi khác khoa, vì trùng tên giữa hai khoa là chuyện bình thường", () => {
+    expect(findDuplicateGroups([
+      stu({ id: "a@x.vn", department: "Khoa Nội" }),
+      stu({ id: "b@x.vn", department: "Khoa Ngoại" }),
+    ])).toEqual([]);
+  });
+
+  it("không gom khi khác tên", () => {
+    expect(findDuplicateGroups([
+      stu({ id: "a@x.vn", fullName: "Nguyễn Văn A" }),
+      stu({ id: "b@x.vn", fullName: "Trần Thị B" }),
+    ])).toEqual([]);
+  });
+
+  it("bỏ qua khác biệt hoa/thường và khoảng trắng thừa khi so tên", () => {
+    expect(findDuplicateGroups([
+      stu({ id: "a@x.vn", fullName: "Nguyễn Văn A" }),
+      stu({ id: "b@x.vn", fullName: "  nguyễn   văn a " }),
+    ])).toHaveLength(1);
+  });
+
+  it("không báo lại cặp đã được đánh dấu không trùng", () => {
+    expect(findDuplicateGroups([
+      stu({ id: "a@x.vn", notDuplicateOf: ["b@x.vn"] }),
+      stu({ id: "b@x.vn", notDuplicateOf: ["a@x.vn"] }),
+    ])).toEqual([]);
+  });
+
+  it("đánh dấu một chiều cũng đủ để im lặng, vì giáo vụ đã quyết một lần", () => {
+    expect(findDuplicateGroups([
+      stu({ id: "a@x.vn", notDuplicateOf: ["b@x.vn"] }),
+      stu({ id: "b@x.vn" }),
+    ])).toEqual([]);
+  });
+
+  it("nhóm ba người còn một cặp chưa xử lý thì vẫn báo", () => {
+    const groups = findDuplicateGroups([
+      stu({ id: "a@x.vn", notDuplicateOf: ["b@x.vn"] }),
+      stu({ id: "b@x.vn", notDuplicateOf: ["a@x.vn"] }),
+      stu({ id: "c@x.vn" }),
+    ]);
+    expect(groups).toHaveLength(1);
+    expect(groups[0].students).toHaveLength(3);
+  });
+
+  it("hồ sơ lẻ loi không tạo nhóm", () => {
+    expect(findDuplicateGroups([stu({ id: "a@x.vn" })])).toEqual([]);
   });
 });
