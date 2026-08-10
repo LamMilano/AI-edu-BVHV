@@ -9,7 +9,10 @@ import DepartmentField from "./DepartmentField";
 import { isValidDepartment } from "../lib/departments";
 
 interface SurveyFormProps {
-  onSuccess: () => void;
+  /* Truyền thẳng tên và cấp độ ra ngoài. Trước đây App phải đọc lại toàn bộ
+     collection chỉ để biết vừa gửi cái gì — vừa thừa một lượt đọc, vừa sẽ bị
+     rules từ chối vì khách vãng lai không được đọc survey_submissions. */
+  onSuccess: (name: string, level: "L1" | "L2" | "L3") => void;
 }
 
 const STEPS = [
@@ -448,7 +451,7 @@ export default function SurveyForm({ onSuccess }: SurveyFormProps) {
 
       await createSubmission(submission);
       setSubmitting(false);
-      onSuccess();
+      onSuccess(submission.studentName, submission.assignedLevel);
     } catch (err) {
       console.error("Lỗi khi gửi kết quả khảo sát: ", err);
       setSubmitting(false);

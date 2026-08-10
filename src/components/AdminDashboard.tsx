@@ -7,6 +7,7 @@ import { LEVEL_RAMP, LEVEL_LABEL } from "../lib/levels";
 import { formatDateVN, formatTimeVN } from "../lib/datetime";
 import { useStudentFilters } from "../hooks/useStudentFilters";
 import StudentStats from "./StudentStats";
+import { computePublicStats } from "../lib/stats";
 import StudentFilterBar from "./StudentFilterBar";
 import {
   LayoutDashboard, Users, FileText, Calendar, BellRing, Plus,
@@ -87,6 +88,9 @@ export default function AdminDashboard({ submissions, announcements, classes, on
 
   // Calculations for Stats Card
   const totalSubmissions = submissions.length;
+
+  // Số liệu tổng hợp: cùng một hàm với trang chủ, nên hai nơi không bao giờ lệch nhau.
+  const publicStats = computePublicStats(submissions);
 
   // Giờ dữ liệu được nạp gần nhất — bảng số liệu cần cho biết độ mới
   const lastUpdated = new Date().toLocaleTimeString("vi-VN", { hour: "2-digit", minute: "2-digit" });
@@ -239,7 +243,7 @@ export default function AdminDashboard({ submissions, announcements, classes, on
       </div>
 
       {/* ══ THÔNG TIN HỌC VIÊN — dùng chung với trang chủ (src/components/StudentStats.tsx) ══ */}
-      <StudentStats submissions={submissions} showCharts={adminSubTab === "students"} />
+      <StudentStats stats={publicStats} showCharts={adminSubTab === "students"} />
 
       {/* SUB-TABS VIEWS */}
 

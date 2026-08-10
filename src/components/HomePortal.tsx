@@ -1,11 +1,13 @@
 import React, { useState } from "react";
 import { ShieldAlert, Briefcase, Zap, ArrowRight } from "lucide-react";
-import { SurveySubmission } from "../types";
+import { PublicStatsData } from "../types";
 import StudentStats from "./StudentStats";
 
 interface HomePortalProps {
   onStartSurvey: () => void;
-  submissions: SurveySubmission[];
+  /* null khi chưa có document public_stats/summary — khối thống kê ẩn hẳn
+     thay vì hiện một dãy số 0 trông như chương trình không có ai học. */
+  stats: PublicStatsData | null;
 }
 
 type Level = "L1" | "L2" | "L3";
@@ -96,7 +98,7 @@ const PRINCIPLES = [
   },
 ];
 
-export default function HomePortal({ onStartSurvey, submissions }: HomePortalProps) {
+export default function HomePortal({ onStartSurvey, stats }: HomePortalProps) {
   const [selectedLevel, setSelectedLevel] = useState<Level>("L1");
 
   const openAgenda = (lvl: Level) => {
@@ -147,7 +149,7 @@ export default function HomePortal({ onStartSurvey, submissions }: HomePortalPro
             <h2 className="text-[15px] font-extrabold tracking-tight">Thông tin học viên</h2>
             <span className="text-[12.5px] text-ink-3">Tổng hợp từ các khảo sát đã gửi</span>
           </div>
-          <StudentStats submissions={submissions} />
+          {stats && <StudentStats stats={stats} />}
         </div>
 
         {/* Ba con số thật — thay cho widget trạng thái hệ thống hiển thị dữ liệu cứng */}

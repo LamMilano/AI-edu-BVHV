@@ -1,122 +1,117 @@
 import React, { useState, useEffect } from "react";
-import { collection, getDocs, query, orderBy } from "firebase/firestore";
-import { db } from "./lib/firebase";
-import { SurveySubmission, Announcement, ClassSession } from "./types";
+import { SurveySubmission, Announcement, ClassSession, PublicStatsData, AuthUser } from "./types";
 import Navigation from "./components/Navigation";
 import HomePortal from "./components/HomePortal";
 import SurveyForm from "./components/SurveyForm";
 import AdminDashboard from "./components/AdminDashboard";
 import TeacherLogin from "./components/TeacherLogin";
-import { isTeacherAuthed, clearTeacherAuth } from "./lib/auth";
+import { onAuthChange, signOutUser } from "./lib/authz";
+import { fetchSubmissions } from "./lib/repo/submissions";
+import { fetchAnnouncements } from "./lib/repo/announcements";
+import { fetchClasses } from "./lib/repo/classes";
+import { fetchPublicStats, writePublicStats } from "./lib/repo/publicStats";
+import { computePublicStats } from "./lib/stats";
 import { CheckCircle2, ArrowRight } from "lucide-react";
 import HungVuongLogo from "./components/HungVuongLogo";
 
 export default function App() {
   const [activeTab, setActiveTab] = useState<"home" | "survey" | "admin">("home");
-  // Quyền Giảng viên: khôi phục từ localStorage để ghi nhớ đăng nhập.
-  const [isAdmin, setIsAdmin] = useState(() => isTeacherAuthed());
-  
-  // Data State
-  const [submissions, setSubmissions] = useState<SurveySubmission[]>([]);
-  const [announcements, setAnnouncements] = useState<Announcement[]>([]);
-  const [classes, setClasses] = useState<ClassSession[]>([]);
-  const [loading, setLoading] = useState(true);
 
-  // Success Modal State after Survey submission
+  /* Phiên đăng nhập. authReady = false nghĩa là Firebase Auth chưa kịp khôi
+     phục phiên cũ — chưa biết là khách hay giảng viên, nên chưa vẽ gì. Nếu
+     bỏ cờ này, người đã đăng nhập sẽ thấy màn hình đăng nhập nhấp nháy một
+     nhịp mỗi lần tải trang. */
+  const [user, setUser] = useState<AuthUser | null>(null);
+  const [authReady, setAuthReady] = useState(false);
+
+  // Dữ liệu công khai: ai cũng đọc được.
+  const [stats, setStats] = useState<PublicStatsData | null>(null);
+  const [announcements, setAnnouncements] = useState<Announcement[]>([]);
+  const [publicLoading, setPublicLoading] = useState(true);
+
+  // Dữ liệu quản trị: chỉ nạp sau khi đăng nhập và mở tab Quản trị.
+  const [submissions, setSubmissions] = useState<SurveySubmission[]>([]);
+  const [classes, setClasses] = useState<ClassSession[]>([]);
+  const [adminLoading, setAdminLoading] = useState(false);
+
+  // Hộp thoại xác nhận sau khi gửi khảo sát
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [lastSubmissionResult, setLastSubmissionResult] = useState<{
     name: string;
     level: "L1" | "L2" | "L3";
   } | null>(null);
 
-  // Function to load all data from Firestore
-  const loadFirestoreData = async () => {
-    setLoading(true);
+  // Theo dõi phiên đăng nhập suốt vòng đời app.
+  useEffect(() => onAuthChange((u) => {
+    setUser(u);
+    setAuthReady(true);
+  }), []);
+
+  /* Dữ liệu công khai nạp một lần khi mở trang. Trước đây App nạp cả
+     survey_submissions và classes ngay cả với khách chỉ vào điền khảo sát —
+     sau khi siết rules những lệnh đọc đó sẽ bị từ chối. */
+  useEffect(() => {
+    (async () => {
+      setPublicLoading(true);
+      try {
+        const [s, a] = await Promise.all([fetchPublicStats(), fetchAnnouncements()]);
+        setStats(s);
+        setAnnouncements(a);
+      } catch (err) {
+        console.error("Lỗi khi tải dữ liệu công khai: ", err);
+      } finally {
+        setPublicLoading(false);
+      }
+    })();
+  }, []);
+
+  const loadAdminData = async () => {
+    if (!user) return;
+    setAdminLoading(true);
     try {
-      /* KHÔNG tự seed dữ liệu mẫu ở đây. Trước kia hàm này gọi seedInitialData(),
-         mà seed lại chạy mỗi lần tải trang và mỗi lần refresh sau khi xoá — nên
-         xoá hết lớp/thông báo là chúng lập tức được tạo lại. Muốn nạp lại dữ liệu
-         mẫu thì gọi seedInitialData() trong src/lib/seed.ts một cách chủ động. */
+      const [subs, cls] = await Promise.all([fetchSubmissions(), fetchClasses()]);
+      setSubmissions(subs);
+      setClasses(cls);
 
-      // 1. Fetch Announcements (ordered by createdAt descending)
-      const annQuery = query(collection(db, "announcements"), orderBy("createdAt", "desc"));
-      const annSnap = await getDocs(annQuery);
-      const annList = annSnap.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data()
-      })) as Announcement[];
-      setAnnouncements(annList);
-
-      // 3. Fetch Classes
-      const classesSnap = await getDocs(collection(db, "classes"));
-      const classesList = classesSnap.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data()
-      })) as ClassSession[];
-      // Sort classes loosely by level
-      classesList.sort((a, b) => a.level.localeCompare(b.level));
-      setClasses(classesList);
-
-      // 4. Fetch Submissions
-      const subSnap = await getDocs(collection(db, "survey_submissions"));
-      const subList = subSnap.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data()
-      })) as SurveySubmission[];
-      setSubmissions(subList);
-
+      /* Làm mới số liệu trang chủ. Khách vãng lai không có quyền ghi, nên đây
+         là lần duy nhất public_stats được cập nhật — con số trên trang chủ trễ
+         tới lần quản trị viên đăng nhập gần nhất. Đánh đổi có ý thức để khỏi
+         phải dựng Cloud Functions cho một con số mang tính trưng bày. */
+      if (user.role === "admin") {
+        const fresh = computePublicStats(subs);
+        await writePublicStats(fresh);
+        setStats(fresh);
+      }
     } catch (err) {
-      console.error("Lỗi khi tải dữ liệu Firestore: ", err);
+      console.error("Lỗi khi tải dữ liệu quản trị: ", err);
     } finally {
-      setLoading(false);
+      setAdminLoading(false);
     }
   };
 
+  // Nạp dữ liệu quản trị khi đã đăng nhập và đang ở tab Quản trị.
   useEffect(() => {
-    loadFirestoreData();
-  }, []);
+    if (activeTab === "admin" && user) {
+      loadAdminData();
+    }
+  }, [activeTab, user?.uid]);
 
-  // Handle successful survey submission
-  const handleSurveySuccess = () => {
-    // Reload submissions to show on Admin dashboard immediately
-    loadFirestoreData();
-    
-    // Read the newest submission to display on the success alert
-    setTimeout(async () => {
-      try {
-        const subSnap = await getDocs(collection(db, "survey_submissions"));
-        const subList = subSnap.docs.map(doc => ({
-          id: doc.id,
-          ...doc.data()
-        })) as SurveySubmission[];
-        
-        // Sort by submittedAt to find the latest
-        subList.sort((a, b) => b.submittedAt?.seconds - a.submittedAt?.seconds);
-        if (subList.length > 0) {
-          setLastSubmissionResult({
-            name: subList[0].studentName,
-            level: subList[0].assignedLevel
-          });
-          setShowSuccessModal(true);
-        } else {
-          setActiveTab("home");
-        }
-      } catch (err) {
-        setActiveTab("home");
-      }
-    }, 500);
+  // Gửi khảo sát xong: SurveyForm đưa thẳng kết quả sang, không phải đọc lại Firestore.
+  const handleSurveySuccess = (name: string, level: "L1" | "L2" | "L3") => {
+    setLastSubmissionResult({ name, level });
+    setShowSuccessModal(true);
   };
 
-  // Đăng nhập giảng viên thành công (gọi từ TeacherLogin).
+  // Đăng nhập thành công (gọi từ TeacherLogin). onAuthChange sẽ tự cập nhật user.
   const handleLoginSuccess = () => {
-    setIsAdmin(true);
     setActiveTab("admin");
   };
 
-  // Đăng xuất khỏi quyền giảng viên.
-  const handleLogout = () => {
-    clearTeacherAuth();
-    setIsAdmin(false);
+  const handleLogout = async () => {
+    await signOutUser();
+    // Xóa dữ liệu quản trị khỏi bộ nhớ để người dùng sau không thấy được.
+    setSubmissions([]);
+    setClasses([]);
     setActiveTab("home");
   };
 
@@ -131,25 +126,25 @@ export default function App() {
         <Navigation
           activeTab={activeTab}
           setActiveTab={setActiveTab}
-          isAdmin={isAdmin}
+          isAdmin={!!user}
           onLogout={handleLogout}
         />
 
         {/* Khung nội dung chính */}
         <main className="flex-grow max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 w-full">
-        {loading && (
+        {(publicLoading || !authReady) && (
           <div className="flex flex-col items-center justify-center py-24 space-y-4">
             <div className="w-11 h-11 border-[3px] border-brand-sky-deep border-t-transparent rounded-full animate-spin" />
             <p className="text-sm font-semibold text-ink-3">Đang tải dữ liệu…</p>
           </div>
         )}
 
-        {!loading && (
+        {!publicLoading && authReady && (
           <div className="animate-fade-up">
             {activeTab === "home" && (
               <HomePortal
                 onStartSurvey={() => setActiveTab("survey")}
-                submissions={submissions}
+                stats={stats}
               />
             )}
 
@@ -158,13 +153,20 @@ export default function App() {
             )}
 
             {activeTab === "admin" && (
-              isAdmin ? (
-                <AdminDashboard
-                  submissions={submissions}
-                  announcements={announcements}
-                  classes={classes}
-                  onRefreshData={loadFirestoreData}
-                />
+              user ? (
+                adminLoading ? (
+                  <div className="flex flex-col items-center justify-center py-24 space-y-4">
+                    <div className="w-11 h-11 border-[3px] border-brand-sky-deep border-t-transparent rounded-full animate-spin" />
+                    <p className="text-sm font-semibold text-ink-3">Đang tải dữ liệu quản trị…</p>
+                  </div>
+                ) : (
+                  <AdminDashboard
+                    submissions={submissions}
+                    announcements={announcements}
+                    classes={classes}
+                    onRefreshData={loadAdminData}
+                  />
+                )
               ) : (
                 <TeacherLogin onSuccess={handleLoginSuccess} />
               )

@@ -2,28 +2,24 @@ import React from "react";
 import {
   ResponsiveContainer, PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, Tooltip
 } from "recharts";
-import { SurveySubmission } from "../types";
+import { PublicStatsData } from "../types";
 import { LEVEL_RAMP, LEVEL_LABEL, LEVEL_IDS, LevelId } from "../lib/levels";
 
 interface StudentStatsProps {
-  submissions: SurveySubmission[];
+  stats: PublicStatsData;
   /* Biểu đồ chỉ có ý nghĩa khi đang xem danh sách học viên; ở các tab khác
      của Quản trị thì chỉ giữ lại bốn ô số. */
   showCharts?: boolean;
 }
 
 /* Khối "Thông tin học viên": bốn ô số + donut phân bố cấp độ + cột khoa/phòng.
-   Dùng chung cho trang chủ (công khai) và bảng Quản trị nên hai nơi luôn
-   hiển thị đúng một con số như nhau. Chỉ có số liệu tổng hợp, không có
-   thông tin định danh học viên — an toàn để đưa ra ngoài. */
-export default function StudentStats({ submissions, showCharts = true }: StudentStatsProps) {
-  const totalSubmissions = submissions.length;
-
-  const levelCount: Record<LevelId, number> = {
-    L1: submissions.filter(s => s.assignedLevel === "L1").length,
-    L2: submissions.filter(s => s.assignedLevel === "L2").length,
-    L3: submissions.filter(s => s.assignedLevel === "L3").length,
-  };
+   Nhận số liệu đã tổng hợp sẵn thay vì tự đếm từ dữ liệu thô, vì trang chủ
+   (khách vãng lai) không có quyền đọc survey_submissions sau khi siết rules.
+   Bảng Quản trị truyền vào computePublicStats(submissions); trang chủ truyền
+   vào document public_stats/summary — hai nơi luôn hiện đúng một con số. */
+export default function StudentStats({ stats, showCharts = true }: StudentStatsProps) {
+  const totalSubmissions = stats.totalStudents;
+  const levelCount: Record<LevelId, number> = stats.byLevel;
 
   const distributionData = LEVEL_IDS
     .map((id) => ({
@@ -34,16 +30,11 @@ export default function StudentStats({ submissions, showCharts = true }: Student
     }))
     .filter(d => d.value > 0);
 
-  // Department statistics
-  const deptMap: Record<string, number> = {};
-  submissions.forEach(s => {
-    const dept = s.department || "Khác";
-    deptMap[dept] = (deptMap[dept] || 0) + 1;
-  });
-  const departmentData = Object.keys(deptMap).map(key => ({
-    name: key,
-    students: deptMap[key]
-  })).sort((a, b) => b.students - a.students).slice(0, 5);
+  // Năm khoa/phòng đông nhất — đã được computePublicStats lọc và sắp sẵn.
+  const departmentData = stats.topDepartments.map(d => ({
+    name: d.name,
+    students: d.count
+  }));
 
   return (
     <>
