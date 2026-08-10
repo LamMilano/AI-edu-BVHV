@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from "react";
-import { SurveySubmission, Announcement, ClassSession, PublicStatsData, AuthUser } from "./types";
+import {
+  SurveySubmission, Announcement, ClassSession, PublicStatsData, AuthUser, Student,
+} from "./types";
 import Navigation from "./components/Navigation";
 import HomePortal from "./components/HomePortal";
 import SurveyForm from "./components/SurveyForm";
@@ -9,6 +11,7 @@ import { onAuthChange, signOutUser } from "./lib/authz";
 import { fetchSubmissions } from "./lib/repo/submissions";
 import { fetchAnnouncements } from "./lib/repo/announcements";
 import { fetchClasses } from "./lib/repo/classes";
+import { fetchStudents } from "./lib/repo/students";
 import { fetchPublicStats, writePublicStats } from "./lib/repo/publicStats";
 import { computePublicStats } from "./lib/stats";
 import { CheckCircle2, ArrowRight } from "lucide-react";
@@ -32,6 +35,7 @@ export default function App() {
   // Dữ liệu quản trị: chỉ nạp sau khi đăng nhập và mở tab Quản trị.
   const [submissions, setSubmissions] = useState<SurveySubmission[]>([]);
   const [classes, setClasses] = useState<ClassSession[]>([]);
+  const [students, setStudents] = useState<Student[]>([]);
   const [adminLoading, setAdminLoading] = useState(false);
 
   // Hộp thoại xác nhận sau khi gửi khảo sát
@@ -69,9 +73,12 @@ export default function App() {
     if (!user) return;
     setAdminLoading(true);
     try {
-      const [subs, cls] = await Promise.all([fetchSubmissions(), fetchClasses()]);
+      const [subs, cls, stu] = await Promise.all([
+        fetchSubmissions(), fetchClasses(), fetchStudents(),
+      ]);
       setSubmissions(subs);
       setClasses(cls);
+      setStudents(stu);
 
       /* Làm mới số liệu trang chủ. Khách vãng lai không có quyền ghi, nên đây
          là lần duy nhất public_stats được cập nhật — con số trên trang chủ trễ
@@ -112,6 +119,7 @@ export default function App() {
     // Xóa dữ liệu quản trị khỏi bộ nhớ để người dùng sau không thấy được.
     setSubmissions([]);
     setClasses([]);
+    setStudents([]);
     setActiveTab("home");
   };
 
@@ -164,6 +172,8 @@ export default function App() {
                     submissions={submissions}
                     announcements={announcements}
                     classes={classes}
+                    students={students}
+                    studentsLoading={adminLoading}
                     onRefreshData={loadAdminData}
                   />
                 )

@@ -2,7 +2,11 @@ import React, { useState, useEffect } from "react";
 import { saveClass, deleteClass } from "../lib/repo/classes";
 import { createAnnouncement, deleteAnnouncement } from "../lib/repo/announcements";
 import { deleteSubmission } from "../lib/repo/submissions";
-import { SurveySubmission, Announcement, ClassSession } from "../types";
+import { SurveySubmission, Announcement, ClassSession, Student } from "../types";
+import StudentProfileList from "../features/students/StudentProfileList";
+import DuplicateReview from "../features/students/DuplicateReview";
+import { migrateStudents, MigrateReport } from "../lib/migrate";
+import { markNotDuplicate, mergeStudents } from "../lib/repo/students";
 import { LEVEL_RAMP, LEVEL_LABEL } from "../lib/levels";
 import { formatDateVN, formatTimeVN } from "../lib/datetime";
 import { useStudentFilters } from "../hooks/useStudentFilters";
@@ -18,6 +22,8 @@ interface AdminDashboardProps {
   submissions: SurveySubmission[];
   announcements: Announcement[];
   classes: ClassSession[];
+  students: Student[];
+  studentsLoading: boolean;
   onRefreshData: () => void;
 }
 
@@ -56,9 +62,59 @@ function AnswerSection({ step, title, children }: {
 const listAnswer = (items: string[] | undefined, fallback: string, other?: string) =>
   [...(items || []), other].filter(Boolean).join(", ") || fallback;
 
-export default function AdminDashboard({ submissions, announcements, classes, onRefreshData }: AdminDashboardProps) {
+export default function AdminDashboard({
+  submissions, announcements, classes, students, studentsLoading, onRefreshData,
+}: AdminDashboardProps) {
   // Navigation tabs within Admin Panel
   const [adminSubTab, setAdminSubTab] = useState<"students" | "classes" | "announcements">("students");
+
+  /* Ba chế độ xem trong tab Học viên. Hồ sơ là mặc định vì đó là đơn vị vận
+     hành (một dòng một người); bảng phiếu giữ lại làm dữ liệu thô để đối chiếu. */
+  const [studentView, setStudentView] = useState<"profiles" | "duplicates" | "submissions">("profiles");
+  const [migrating, setMigrating] = useState(false);
+  const [migrateReport, setMigrateReport] = useState<MigrateReport | null>(null);
+  const [studentActionBusy, setStudentActionBusy] = useState(false);
+
+  const handleMigrate = async () => {
+    if (!confirm("Dựng lại hồ sơ học viên từ toàn bộ phiếu khảo sát? Thao tác này an toàn khi chạy nhiều lần.")) return;
+    setMigrating(true);
+    try {
+      const report = await migrateStudents();
+      setMigrateReport(report);
+      onRefreshData();
+    } catch (err) {
+      console.error("Lỗi khi dựng hồ sơ học viên: ", err);
+      alert("Không dựng được hồ sơ. Kiểm tra quyền tài khoản và kết nối mạng.");
+    } finally {
+      setMigrating(false);
+    }
+  };
+
+  const handleMergeStudents = async (keepId: string, dropId: string) => {
+    setStudentActionBusy(true);
+    try {
+      await mergeStudents(keepId, dropId);
+      onRefreshData();
+    } catch (err) {
+      console.error("Lỗi khi gộp hồ sơ: ", err);
+      alert("Không gộp được hồ sơ. Vui lòng thử lại.");
+    } finally {
+      setStudentActionBusy(false);
+    }
+  };
+
+  const handleDismissDuplicate = async (idA: string, idB: string) => {
+    setStudentActionBusy(true);
+    try {
+      await markNotDuplicate(idA, idB);
+      onRefreshData();
+    } catch (err) {
+      console.error("Lỗi khi đánh dấu không trùng: ", err);
+      alert("Không lưu được đánh dấu. Vui lòng thử lại.");
+    } finally {
+      setStudentActionBusy(false);
+    }
+  };
 
   // State for creating / editing a Class
   const [newClass, setNewClass] = useState({
@@ -247,9 +303,50 @@ export default function AdminDashboard({ submissions, announcements, classes, on
 
       {/* SUB-TABS VIEWS */}
 
-      {/* 1. STUDENTS SUBMISSIONS */}
+      {/* 1. HỌC VIÊN — ba chế độ xem: hồ sơ, nghi trùng, phiếu khảo sát thô */}
       {adminSubTab === "students" && (
         <div className="space-y-4">
+          <div className="inline-flex rounded-field p-[3px] gap-0.5 bg-gradient-to-b from-[#E8F0F9] to-[#DCE8F4]">
+            {[
+              { id: "profiles", label: `Hồ sơ (${students.length})` },
+              { id: "duplicates", label: "Nghi trùng" },
+              { id: "submissions", label: `Phiếu khảo sát (${submissions.length})` },
+            ].map(v => (
+              <button
+                key={v.id}
+                id={`student-view-${v.id}`}
+                onClick={() => setStudentView(v.id as any)}
+                className={`px-3.5 py-1.5 text-[12.5px] font-bold rounded-[7px] transition-all cursor-pointer ${
+                  studentView === v.id
+                    ? "bg-gradient-to-b from-white to-[#F6FAFD] text-brand-navy shadow-[0_2px_6px_-2px_rgb(20_51_110/0.3)]"
+                    : "text-ink-3 hover:text-ink"
+                }`}
+              >
+                {v.label}
+              </button>
+            ))}
+          </div>
+
+          {studentView === "profiles" && (
+            <StudentProfileList
+              students={students}
+              loading={studentsLoading}
+              migrating={migrating}
+              report={migrateReport}
+              onMigrate={handleMigrate}
+            />
+          )}
+
+          {studentView === "duplicates" && (
+            <DuplicateReview
+              students={students}
+              busy={studentActionBusy}
+              onMerge={handleMergeStudents}
+              onDismiss={handleDismissDuplicate}
+            />
+          )}
+
+          {studentView === "submissions" && (
           <div className="surface p-5 space-y-4">
             <StudentFilterBar {...studentFilters} />
 
@@ -339,8 +436,9 @@ export default function AdminDashboard({ submissions, announcements, classes, on
               </table>
             </div>
           </div>
+          )}
 
-          {/* Student details expansion modal/pane if selected */}
+          {/* Phiếu chi tiết nằm ngoài ba chế độ xem, mở từ bảng phiếu khảo sát */}
           {selectedSubmission && (
             <div className="surface cut-corner p-6 sm:p-7 space-y-5">
               <div className="flex items-start justify-between gap-4 pb-4 border-b border-line-soft">
