@@ -1,8 +1,7 @@
 import React, { useState, useEffect } from "react";
-import {
-  collection, getDocs, addDoc, updateDoc, deleteDoc, doc, serverTimestamp
-} from "firebase/firestore";
-import { db } from "../lib/firebase";
+import { saveClass, deleteClass } from "../lib/repo/classes";
+import { createAnnouncement, deleteAnnouncement } from "../lib/repo/announcements";
+import { deleteSubmission } from "../lib/repo/submissions";
 import { SurveySubmission, Announcement, ClassSession } from "../types";
 import { LEVEL_RAMP, LEVEL_LABEL } from "../lib/levels";
 import { formatDateVN, formatTimeVN } from "../lib/datetime";
@@ -146,11 +145,7 @@ export default function AdminDashboard({ submissions, announcements, classes, on
     }
     setLoading(true);
     try {
-      if (editingClassId) {
-        await updateDoc(doc(db, "classes", editingClassId), newClass);
-      } else {
-        await addDoc(collection(db, "classes"), newClass);
-      }
+      await saveClass(editingClassId, newClass);
       resetClassForm();
       onRefreshData();
     } catch (err) {
@@ -170,16 +165,7 @@ export default function AdminDashboard({ submissions, announcements, classes, on
     }
     setLoading(true);
     try {
-      const today = new Date();
-      const formattedDate = today.toLocaleDateString("vi-VN");
-      
-      await addDoc(collection(db, "announcements"), {
-        title: newAnn.title,
-        content: newAnn.content,
-        category: newAnn.category,
-        date: formattedDate,
-        createdAt: serverTimestamp()
-      });
+      await createAnnouncement(newAnn);
 
       setNewAnn({
         title: "",
@@ -200,7 +186,13 @@ export default function AdminDashboard({ submissions, announcements, classes, on
     if (!confirm("Bạn có chắc chắn muốn xóa mục này? Hành động này không thể hoàn tác.")) return;
     
     try {
-      await deleteDoc(doc(db, coll, id));
+      if (coll === "classes") {
+        await deleteClass(id);
+      } else if (coll === "announcements") {
+        await deleteAnnouncement(id);
+      } else {
+        await deleteSubmission(id);
+      }
       onRefreshData();
       if (selectedSubmission?.id === id) setSelectedSubmission(null);
     } catch (err) {

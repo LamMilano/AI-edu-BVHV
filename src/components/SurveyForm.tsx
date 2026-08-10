@@ -1,6 +1,5 @@
 import React, { useState } from "react";
-import { collection, addDoc, serverTimestamp } from "firebase/firestore";
-import { db } from "../lib/firebase";
+import { createSubmission } from "../lib/repo/submissions";
 import { SurveySubmission } from "../types";
 import {
   User, Mail, Phone, Check, Send, CheckCircle2,
@@ -421,7 +420,9 @@ export default function SurveyForm({ onSuccess }: SurveyFormProps) {
     setSubmitting(true);
 
     try {
-      const submission: SurveySubmission = {
+      // submittedAt do createSubmission tự gán bằng serverTimestamp, nên
+      // giờ khảo sát luôn là giờ máy chủ chứ không phải giờ máy người dùng.
+      const submission: Omit<SurveySubmission, "id" | "submittedAt"> = {
         studentName: formData.studentName,
         department: formData.department,
         email: formData.email,
@@ -442,11 +443,10 @@ export default function SurveyForm({ onSuccess }: SurveyFormProps) {
           q10_timeframe: formData.q10_timeframe,
           q11_days: formData.q11_days,
           q12_duration: formData.q12_duration
-        },
-        submittedAt: serverTimestamp()
+        }
       };
 
-      await addDoc(collection(db, "survey_submissions"), submission);
+      await createSubmission(submission);
       setSubmitting(false);
       onSuccess();
     } catch (err) {
