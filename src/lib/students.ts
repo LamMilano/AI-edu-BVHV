@@ -21,3 +21,54 @@ export function normalizeEmail(raw: string): string | null {
 export function normalizeName(raw: string): string {
   return (raw || "").trim().toLowerCase().replace(/\s+/g, " ");
 }
+
+/* Phiếu thiếu submittedAt (dữ liệu cũ) coi như mốc 0 để không bao giờ
+   thắng phiếu có ngày thật khi chọn "phiếu mới nhất". */
+const submittedSeconds = (s: SurveySubmission): number => s.submittedAt?.seconds || 0;
+
+export function buildStudentsFromSubmissions(
+  subs: SurveySubmission[]
+): { drafts: StudentDraft[]; skipped: SkippedSubmission[] } {
+  const byEmail = new Map<string, { latest: SurveySubmission; count: number }>();
+  const skipped: SkippedSubmission[] = [];
+
+  for (const s of subs) {
+    const key = normalizeEmail(s.email);
+    if (!key) {
+      skipped.push({
+        submissionId: s.id || "",
+        studentName: s.studentName || "(không tên)",
+        reason: "Thiếu email hợp lệ",
+      });
+      continue;
+    }
+
+    const existing = byEmail.get(key);
+    if (!existing) {
+      byEmail.set(key, { latest: s, count: 1 });
+    } else {
+      byEmail.set(key, {
+        latest: submittedSeconds(s) > submittedSeconds(existing.latest) ? s : existing.latest,
+        count: existing.count + 1,
+      });
+    }
+  }
+
+  const drafts: StudentDraft[] = Array.from(byEmail.entries()).map(([id, { latest, count }]) => ({
+    id,
+    email: latest.email,
+    fullName: latest.studentName,
+    department: latest.department,
+    phone: latest.phone,
+    currentLevel: latest.assignedLevel,
+    latestSubmissionId: latest.id || "",
+    submissionCount: count,
+    availability: {
+      timeframes: latest.answers?.q10_timeframe || [],
+      days: latest.answers?.q11_days || [],
+      duration: latest.answers?.q12_duration || "",
+    },
+  }));
+
+  return { drafts, skipped };
+}
