@@ -1,9 +1,10 @@
 import {
-  collection, getDocs, getDoc, updateDoc, deleteDoc, doc,
+  collection, getDocs, getDoc, updateDoc, deleteDoc, doc, query, where,
   arrayUnion, serverTimestamp, writeBatch,
 } from "firebase/firestore";
 import { db } from "../firebase";
 import { Student, StudentDraft } from "../../types";
+import { enrollmentId } from "./enrollments";
 
 const COL = "students";
 
@@ -62,16 +63,52 @@ export async function markNotDuplicate(idA: string, idB: string): Promise<void> 
   await batch.commit();
 }
 
-/* Gộp: giữ keepId, xóa dropId, ghi vết vào mergedFrom.
-   NỢ KỸ THUẬT GĐ3: khi có enrollments/sessions, hàm này phải trỏ lại mọi
-   ghi danh và bản ghi điểm danh của dropId sang keepId TRƯỚC khi xóa. */
+/* Gộp hai hồ sơ: giữ keepId, xóa dropId, ghi vết vào mergedFrom.
+   Ghi danh của dropId phải được trỏ sang keepId TRƯỚC khi xóa hồ sơ, nếu
+   không những bản ghi đó thành mồ côi — trỏ tới một học viên không còn tồn
+   tại, và học viên đó biến mất khỏi danh sách lớp mà không ai biết vì sao.
+
+   GĐ4: khi có collection sessions, hàm này còn phải đổi khóa trong
+   sessions.records từ dropId sang keepId. */
 export async function mergeStudents(keepId: string, dropId: string): Promise<void> {
   const dropSnap = await getDoc(doc(db, COL, dropId));
   const dropData = dropSnap.exists() ? (dropSnap.data() as Student) : null;
 
-  await updateDoc(doc(db, COL, keepId), {
+  const dropEnrollments = await getDocs(
+    query(collection(db, "enrollments"), where("studentId", "==", dropId))
+  );
+
+  /* Phải đọc hết trạng thái "người giữ lại đã ở lớp nào" TRƯỚC khi mở batch:
+     writeBatch không đọc được, và await xen giữa các lệnh batch làm thứ tự
+     khó lần khi có lỗi. */
+  const existingTargets = await Promise.all(
+    dropEnrollments.docs.map(enr => {
+      const { classId } = enr.data() as { classId: string };
+      return getDoc(doc(db, "enrollments", enrollmentId(classId, keepId)));
+    })
+  );
+
+  const batch = writeBatch(db);
+
+  dropEnrollments.docs.forEach((enr, idx) => {
+    const data = enr.data() as Record<string, unknown>;
+    const classId = data.classId as string;
+
+    /* Người giữ lại đã có ghi danh ở đúng lớp đó thì bản ghi kia là thừa —
+       xóa đi thay vì ghi đè, vì ghi đè sẽ mất mốc enrolledAt cũ của họ. */
+    if (!existingTargets[idx].exists()) {
+      batch.set(doc(db, "enrollments", enrollmentId(classId, keepId)), {
+        ...data, studentId: keepId,
+      });
+    }
+    batch.delete(enr.ref);
+  });
+
+  batch.update(doc(db, COL, keepId), {
     mergedFrom: arrayUnion(dropId, ...(dropData?.mergedFrom || [])),
     updatedAt: serverTimestamp(),
   });
-  await deleteDoc(doc(db, COL, dropId));
+  batch.delete(doc(db, COL, dropId));
+
+  await batch.commit();
 }
