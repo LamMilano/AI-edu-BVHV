@@ -22,6 +22,26 @@ dự án — nó thử đọc trên cả hai database và nói rõ document nằ
 FB_EMAIL=... FB_PASSWORD=... node diag-auth.mjs
 ```
 
+## Cấp quyền lần đầu (cách nhanh — dùng nút trong app)
+
+Tránh được việc phải tự tay tạo document với đúng `uid` trong đúng database.
+
+1. **Authentication → Sign-in method** → bật **Email/Password**.
+2. **Authentication → Users → Add user** → tạo tài khoản.
+3. Mở `firestore.rules`, kiểm tra email vừa tạo có trong hàm `bootstrapAdmins()`.
+   Chưa có thì thêm vào.
+4. **Firestore → chọn đúng database `ai-studio-…` → Rules** → dán toàn bộ
+   `firestore.rules` → **Publish**.
+5. Vào app → tab Quản trị → đăng nhập → bấm **“Tạo hồ sơ quản trị cho tôi”**.
+
+Rules quyết định ai được phép, và điều kiện đó kiểm tra ở máy chủ — người
+ngoài bấm nút cũng bị Firestore từ chối.
+
+**Sau khi xong, đổi `bootstrapAdmins()` thành `return [];` rồi publish lại.**
+Không bắt buộc về mặt an toàn (chỉ đúng email đó dùng được, và chỉ tạo được
+một lần vì `update`/`delete` bị chặn), nhưng khép lại một lối vào không còn
+dùng đến là thói quen tốt.
+
 ## Cấp tài khoản cho giáo vụ / giảng viên
 
 Thứ tự bắt buộc. Làm ngược sẽ tự khóa mình ra khỏi dữ liệu.

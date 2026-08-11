@@ -17,11 +17,31 @@ service cloud.firestore {
       return roleOf() == 'admin' || roleOf() == 'teacher';
     }
 
-    // Vai trò chỉ được cấp bằng tay trên Firebase Console. Nếu client ghi
-    // được vào đây thì bất kỳ ai cũng tự phong mình làm admin.
+    /* Danh sách email được phép TỰ tạo hồ sơ quản trị lần đầu.
+       ─────────────────────────────────────────────────────────────────
+       Đây là lối thoát cho bài toán con gà - quả trứng: muốn vào app phải có
+       document users/{uid}, mà tạo document đó bằng tay đòi hỏi biết uid và
+       chọn đúng database trong Console — rất dễ sai.
+
+       An toàn vì điều kiện được kiểm tra Ở MÁY CHỦ: chỉ người đăng nhập được
+       bằng đúng email trong danh sách này mới tạo được, và chỉ tạo cho chính
+       mình. Không ai sửa hay xoá được, kể cả chính họ.
+
+       XOÁ danh sách này (để rỗng: []) sau khi đã cấp quyền xong. */
+    function bootstrapAdmins() {
+      return ['nguyenlam.bvhv@gmail.com'];
+    }
+
     match /users/{uid} {
       allow read: if request.auth != null && request.auth.uid == uid;
-      allow write: if false;
+
+      allow create: if request.auth != null
+        && request.auth.uid == uid
+        && request.auth.token.email in bootstrapAdmins()
+        && request.resource.data.role == 'admin';
+
+      // Sửa hoặc xoá vai trò chỉ làm được trên Firebase Console.
+      allow update, delete: if false;
     }
 
     // Khách vãng lai nộp được phiếu nhưng không đọc được phiếu của người khác.

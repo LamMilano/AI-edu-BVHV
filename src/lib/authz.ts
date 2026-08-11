@@ -10,7 +10,7 @@ import {
   browserLocalPersistence,
   type User,
 } from "firebase/auth";
-import { doc, getDoc } from "firebase/firestore";
+import { doc, getDoc, setDoc } from "firebase/firestore";
 import { auth, db, databaseId } from "./firebase";
 import { AuthUser, Role } from "../types";
 
@@ -103,14 +103,11 @@ export function onAuthChange(cb: (user: AuthUser | null) => void): () => void {
     }
     try {
       const result = await loadRole(user);
-      if (!result.user) {
-        // Có phiên Auth nhưng không có vai trò: đăng xuất để không kẹt ở
-        // trạng thái nửa vời (đăng nhập rồi mà mọi lệnh đọc đều bị từ chối).
-        await signOut(auth);
-        cb(null);
-        return;
-      }
-      cb(result.user);
+      /* Không có vai trò thì báo là chưa đăng nhập, nhưng KHÔNG tự đăng xuất:
+         phiên Auth còn sống mới tạo được hồ sơ quản trị lần đầu (claimAdminProfile).
+         Phiên treo không nguy hiểm — rules chặn mọi thứ trừ việc đọc hồ sơ của
+         chính mình. */
+      cb(result.user || null);
     } catch {
       cb(null);
     }
@@ -124,9 +121,29 @@ export async function signIn(email: string, password: string): Promise<void> {
 
   const result = await loadRole(cred.user);
   if (!result.user) {
-    await signOut(auth);
+    /* Giữ nguyên phiên Auth thay vì đăng xuất: claimAdminProfile() cần nó để
+       tạo hồ sơ quản trị lần đầu. Giao diện vẫn coi như chưa đăng nhập. */
     throw new RoleNotGrantedError(result.issue);
   }
+}
+
+/* Tự tạo hồ sơ quản trị cho chính mình, lần đầu tiên.
+
+   Chỉ chạy được nếu email đang đăng nhập nằm trong danh sách bootstrapAdmins
+   của firestore.rules — điều kiện kiểm tra Ở MÁY CHỦ, nên hàm này không phải
+   là lỗ hổng: người khác gọi nó cũng bị Firestore từ chối.
+
+   Giải bài toán con gà - quả trứng: muốn vào app phải có users/{uid}, mà tạo
+   document đó bằng tay đòi hỏi biết uid và chọn đúng database trong Console. */
+export async function claimAdminProfile(): Promise<void> {
+  const user = auth.currentUser;
+  if (!user) throw new Error("Phiên đăng nhập đã hết. Vui lòng đăng nhập lại.");
+
+  await setDoc(doc(db, "users", user.uid), {
+    email: user.email || "",
+    displayName: user.email || "",
+    role: "admin",
+  });
 }
 
 export async function signOutUser(): Promise<void> {

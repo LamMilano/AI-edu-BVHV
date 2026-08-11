@@ -1,6 +1,8 @@
 import React, { useState } from "react";
 import { Lock, ShieldCheck, Eye, EyeOff, AlertCircle, Loader2 } from "lucide-react";
-import { signIn, authErrorMessage, RoleNotGrantedError, RoleIssue } from "../lib/authz";
+import {
+  signIn, authErrorMessage, claimAdminProfile, RoleNotGrantedError, RoleIssue,
+} from "../lib/authz";
 
 interface TeacherLoginProps {
   onSuccess: () => void;
@@ -33,6 +35,26 @@ export default function TeacherLogin({ onSuccess }: TeacherLoginProps) {
       if (err instanceof RoleNotGrantedError) setIssue(err.issue);
       // Xóa mật khẩu nhưng GIỮ email: gõ lại email mỗi lần sai rất phiền.
       setPassword("");
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  /* Tự cấp quyền lần đầu. Firestore Rules mới là nơi quyết định ai được phép;
+     nút này chỉ gọi, không tự phong cho ai cả. */
+  const handleClaim = async () => {
+    setSubmitting(true);
+    setError(null);
+    try {
+      await claimAdminProfile();
+      onSuccess();
+    } catch (err) {
+      const code = (err as { code?: string }).code || "";
+      setError(
+        code === "permission-denied"
+          ? "Firestore từ chối. Email này chưa có trong danh sách bootstrapAdmins của firestore.rules, hoặc rules chưa được publish đúng database."
+          : (err as Error).message || "Không tạo được hồ sơ quản trị."
+      );
     } finally {
       setSubmitting(false);
     }
@@ -138,6 +160,26 @@ export default function TeacherLogin({ onSuccess }: TeacherLoginProps) {
               <p className="text-ink-4 text-[11.5px] leading-relaxed">
                 Document ID phải là chuỗi ở trên, không phải email. Chạm vào để bôi đen rồi sao chép.
               </p>
+
+              {issue.reason === "no-doc" && (
+                <div className="pt-2.5 border-t border-line-soft space-y-2">
+                  <p className="text-ink-3 leading-relaxed">
+                    Hoặc, nếu <code>firestore.rules</code> mới đã được publish và email này
+                    nằm trong danh sách <code>bootstrapAdmins</code>, bấm nút dưới đây để app
+                    tự tạo hồ sơ — khỏi thao tác trong Console.
+                  </p>
+                  <button
+                    id="btn-claim-admin"
+                    type="button"
+                    onClick={handleClaim}
+                    disabled={submitting}
+                    className="btn-primary w-full flex items-center justify-center gap-2 px-4 py-2.5 text-[13.5px] cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed"
+                  >
+                    <ShieldCheck className="w-4 h-4" />
+                    {submitting ? "Đang tạo…" : "Tạo hồ sơ quản trị cho tôi"}
+                  </button>
+                </div>
+              )}
             </div>
           )}
 
