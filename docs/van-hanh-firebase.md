@@ -1,12 +1,36 @@
 # Vận hành Firebase
 
+## ⚠️ App KHÔNG dùng database `(default)`
+
+```
+projectId          : axial-sunup-465910-b7
+firestoreDatabaseId: ai-studio-cngqunlotoai-90934615-7f54-44f1-81e9-815e416cedd2
+```
+
+Giá trị này nằm ở `firebase-applet-config.json` và là database **duy nhất** app đọc/ghi.
+
+Firebase Console mặc định mở database `(default)`. Trang Firestore có ô chọn
+database ở đầu trang — **phải đổi sang đúng database trên** trước khi làm bất
+cứ việc gì dưới đây. Tạo `users/{uid}` hay publish rules nhầm sang `(default)`
+sẽ khiến app không thấy gì cả: đăng nhập được vào Firebase nhưng lập tức bị
+đăng xuất vì không đọc được vai trò.
+
+Muốn kiểm chứng nhanh document nằm ở database nào, chạy script chẩn đoán ở gốc
+dự án — nó thử đọc trên cả hai database và nói rõ document nằm ở đâu:
+
+```bash
+FB_EMAIL=... FB_PASSWORD=... node diag-auth.mjs
+```
+
 ## Cấp tài khoản cho giáo vụ / giảng viên
 
 Thứ tự bắt buộc. Làm ngược sẽ tự khóa mình ra khỏi dữ liệu.
 
 1. Firebase Console → **Authentication** → Sign-in method → bật **Email/Password**.
+   (Authentication dùng chung cho cả project, không phân theo database.)
 2. **Authentication → Users → Add user**: tạo tài khoản, ghi lại `uid`.
-3. **Firestore → collection `users`**: tạo document có Document ID **đúng bằng `uid`**:
+3. **Firestore → chọn đúng database `ai-studio-…` → collection `users`**: tạo
+   document có Document ID **đúng bằng `uid`**:
 
    | Trường | Kiểu | Giá trị |
    |---|---|---|
@@ -14,7 +38,10 @@ Thứ tự bắt buộc. Làm ngược sẽ tự khóa mình ra khỏi dữ li�
    | `displayName` | string | tên hiển thị |
    | `role` | string | `admin` hoặc `teacher` |
 
-4. **Chỉ sau khi bước 3 xong**: Firestore → Rules → dán nội dung `firestore.rules` → Publish.
+   `role` phải đúng chữ thường, không khoảng trắng thừa.
+
+4. **Chỉ sau khi bước 3 xong**: Firestore → **vẫn ở database đó** → Rules →
+   dán nội dung `firestore.rules` → Publish.
 
 ## Vai trò
 
