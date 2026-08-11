@@ -90,6 +90,25 @@ export interface AttendanceSummary {
   total: number;
 }
 
+export interface StudentAttendanceRow {
+  studentId: string;
+  fullName: string;
+  department: string;
+  /* Cùng thứ tự với ClassAttendanceReport.sessions.
+     null = buổi đó học viên chưa ghi danh, không tính vào đâu cả. */
+  cells: (AttendanceStatus | null)[];
+  attended: number;    // present + late
+  counted: number;     // mẫu số: buổi done có tên học viên, trừ vắng có phép
+  rate: number;        // 0..100, đã làm tròn
+  maxAbsentStreak: number;
+}
+
+export interface ClassAttendanceReport {
+  sessions: Session[];             // chỉ buổi đã điểm danh, sắp theo ngày
+  rows: StudentAttendanceRow[];
+  totalDoneSessions: number;
+}
+
 export type EnrollmentStatus = "enrolled" | "transferred" | "dropped";
 
 /* Document ID = `${classId}_${studentId}`, nên ghi danh trùng là bất khả thi
