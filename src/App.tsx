@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import {
-  SurveySubmission, Announcement, ClassRecord, PublicStatsData, AuthUser, Student, Enrollment,
+  SurveySubmission, Announcement, ClassRecord, PublicStatsData, AuthUser, Student, Enrollment, Session,
 } from "./types";
 import Navigation from "./components/Navigation";
 import HomePortal from "./components/HomePortal";
@@ -13,6 +13,7 @@ import { fetchAnnouncements } from "./lib/repo/announcements";
 import { fetchClasses } from "./lib/repo/classes";
 import { fetchStudents } from "./lib/repo/students";
 import { fetchEnrollments } from "./lib/repo/enrollments";
+import { fetchSessions } from "./lib/repo/sessions";
 import { fetchPublicStats, writePublicStats } from "./lib/repo/publicStats";
 import { computePublicStats } from "./lib/stats";
 import { CheckCircle2, ArrowRight } from "lucide-react";
@@ -38,6 +39,7 @@ export default function App() {
   const [classes, setClasses] = useState<ClassRecord[]>([]);
   const [students, setStudents] = useState<Student[]>([]);
   const [enrollments, setEnrollments] = useState<Enrollment[]>([]);
+  const [sessions, setSessions] = useState<Session[]>([]);
   const [adminLoading, setAdminLoading] = useState(false);
 
   // Hộp thoại xác nhận sau khi gửi khảo sát
@@ -75,13 +77,14 @@ export default function App() {
     if (!user) return;
     setAdminLoading(true);
     try {
-      const [subs, cls, stu, enr] = await Promise.all([
-        fetchSubmissions(), fetchClasses(), fetchStudents(), fetchEnrollments(),
+      const [subs, cls, stu, enr, ses] = await Promise.all([
+        fetchSubmissions(), fetchClasses(), fetchStudents(), fetchEnrollments(), fetchSessions(),
       ]);
       setSubmissions(subs);
       setClasses(cls);
       setStudents(stu);
       setEnrollments(enr);
+      setSessions(ses);
 
       /* Làm mới số liệu trang chủ. Khách vãng lai không có quyền ghi, nên đây
          là lần duy nhất public_stats được cập nhật — con số trên trang chủ trễ
@@ -124,6 +127,7 @@ export default function App() {
     setClasses([]);
     setStudents([]);
     setEnrollments([]);
+    setSessions([]);
     setActiveTab("home");
   };
 
@@ -178,6 +182,7 @@ export default function App() {
                     classes={classes}
                     students={students}
                     enrollments={enrollments}
+                    sessions={sessions}
                     currentUid={user.uid}
                     studentsLoading={adminLoading}
                     onRefreshData={loadAdminData}

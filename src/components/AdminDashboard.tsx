@@ -2,7 +2,8 @@ import React, { useState, useEffect } from "react";
 import { saveClass, deleteClass } from "../lib/repo/classes";
 import { createAnnouncement, deleteAnnouncement } from "../lib/repo/announcements";
 import { deleteSubmission } from "../lib/repo/submissions";
-import { SurveySubmission, Announcement, ClassRecord, Student, Enrollment } from "../types";
+import { SurveySubmission, Announcement, ClassRecord, Student, Enrollment, Session } from "../types";
+import AttendancePanel from "../features/attendance/AttendancePanel";
 import AssignmentBoard from "../features/classes/AssignmentBoard";
 import {
   NewEnrollment, saveEnrollments, unenroll, fetchEnrollments, recountClassEnrollments,
@@ -29,6 +30,7 @@ interface AdminDashboardProps {
   classes: ClassRecord[];
   students: Student[];
   enrollments: Enrollment[];
+  sessions: Session[];
   currentUid: string;
   studentsLoading: boolean;
   onRefreshData: () => void;
@@ -83,11 +85,11 @@ const emptyClass = {
 };
 
 export default function AdminDashboard({
-  submissions, announcements, classes, students, enrollments, currentUid,
+  submissions, announcements, classes, students, enrollments, sessions, currentUid,
   studentsLoading, onRefreshData,
 }: AdminDashboardProps) {
   // Navigation tabs within Admin Panel
-  const [adminSubTab, setAdminSubTab] = useState<"students" | "assign" | "classes" | "announcements">("students");
+  const [adminSubTab, setAdminSubTab] = useState<"students" | "assign" | "attendance" | "classes" | "announcements">("students");
 
   /* Ba chế độ xem trong tab Học viên. Hồ sơ là mặc định vì đó là đơn vị vận
      hành (một dòng một người); bảng phiếu giữ lại làm dữ liệu thô để đối chiếu. */
@@ -335,6 +337,7 @@ export default function AdminDashboard({
           {[
             { id: "students", label: "Học viên", icon: Users },
             { id: "assign", label: "Phân lớp", icon: Sparkles },
+            { id: "attendance", label: "Điểm danh", icon: Calendar },
             { id: "classes", label: "Lớp học", icon: BookOpen },
             { id: "announcements", label: "Bảng tin", icon: BellRing }
           ].map(tab => (
@@ -614,6 +617,17 @@ export default function AdminDashboard({
           saving={assignSaving}
           onSave={handleSaveAssignments}
           onUnenroll={handleUnenroll}
+        />
+      )}
+
+      {adminSubTab === "attendance" && (
+        <AttendancePanel
+          classes={classes}
+          students={students}
+          enrollments={enrollments}
+          sessions={sessions}
+          currentUid={currentUid}
+          onRefresh={onRefreshData}
         />
       )}
 
