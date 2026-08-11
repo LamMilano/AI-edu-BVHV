@@ -1,5 +1,6 @@
 import { fetchSubmissions } from "./repo/submissions";
 import { upsertStudentDrafts } from "./repo/students";
+import { migrateClasses } from "./repo/classes";
 import { buildStudentsFromSubmissions } from "./students";
 import { SkippedSubmission } from "../types";
 
@@ -8,6 +9,8 @@ export interface MigrateReport {
   updated: number;
   skipped: SkippedSubmission[];
   totalSubmissions: number;
+  classesConverted: number;
+  classesNeedReview: string[];
 }
 
 /* Dựng lại toàn bộ hồ sơ học viên từ phiếu khảo sát. Chạy được nhiều lần:
@@ -18,5 +21,13 @@ export async function migrateStudents(): Promise<MigrateReport> {
   const submissions = await fetchSubmissions();
   const { drafts, skipped } = buildStudentsFromSubmissions(submissions);
   const { created, updated } = await upsertStudentDrafts(drafts);
-  return { created, updated, skipped, totalSubmissions: submissions.length };
+
+  // Chuyển luôn lịch lớp sang dạng có cấu trúc: hai việc này đều là "dọn dữ
+  // liệu cũ", bắt giáo vụ bấm hai nút riêng chỉ tạo thêm cơ hội quên một nút.
+  const { converted, needsReview } = await migrateClasses();
+
+  return {
+    created, updated, skipped, totalSubmissions: submissions.length,
+    classesConverted: converted, classesNeedReview: needsReview,
+  };
 }

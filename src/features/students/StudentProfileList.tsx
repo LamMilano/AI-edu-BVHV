@@ -58,6 +58,22 @@ export default function StudentProfileList({
             <strong>{report.created}</strong> hồ sơ · cập nhật{" "}
             <strong>{report.updated}</strong> hồ sơ.
           </p>
+          {report.classesConverted > 0 && (
+            <p className="tnum">
+              Đã chuyển <strong>{report.classesConverted}</strong> lớp sang khung lịch có cấu trúc.
+            </p>
+          )}
+          {report.classesNeedReview.length > 0 && (
+            <div className="flex items-start gap-2 text-danger-deep">
+              <AlertTriangle className="w-4 h-4 flex-none mt-0.5" />
+              <div>
+                <span className="font-semibold">
+                  Cần khai lại lịch cho {report.classesNeedReview.length} lớp:
+                </span>
+                <span className="text-ink-3"> {report.classesNeedReview.join(", ")}</span>
+              </div>
+            </div>
+          )}
           {report.skipped.length > 0 && (
             <div className="flex items-start gap-2 text-danger-deep">
               <AlertTriangle className="w-4 h-4 flex-none mt-0.5" />
