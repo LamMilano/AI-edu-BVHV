@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import {
-  SurveySubmission, Announcement, ClassRecord, PublicStatsData, AuthUser, Student,
+  SurveySubmission, Announcement, ClassRecord, PublicStatsData, AuthUser, Student, Enrollment,
 } from "./types";
 import Navigation from "./components/Navigation";
 import HomePortal from "./components/HomePortal";
@@ -12,6 +12,7 @@ import { fetchSubmissions } from "./lib/repo/submissions";
 import { fetchAnnouncements } from "./lib/repo/announcements";
 import { fetchClasses } from "./lib/repo/classes";
 import { fetchStudents } from "./lib/repo/students";
+import { fetchEnrollments } from "./lib/repo/enrollments";
 import { fetchPublicStats, writePublicStats } from "./lib/repo/publicStats";
 import { computePublicStats } from "./lib/stats";
 import { CheckCircle2, ArrowRight } from "lucide-react";
@@ -36,6 +37,7 @@ export default function App() {
   const [submissions, setSubmissions] = useState<SurveySubmission[]>([]);
   const [classes, setClasses] = useState<ClassRecord[]>([]);
   const [students, setStudents] = useState<Student[]>([]);
+  const [enrollments, setEnrollments] = useState<Enrollment[]>([]);
   const [adminLoading, setAdminLoading] = useState(false);
 
   // Hộp thoại xác nhận sau khi gửi khảo sát
@@ -73,12 +75,13 @@ export default function App() {
     if (!user) return;
     setAdminLoading(true);
     try {
-      const [subs, cls, stu] = await Promise.all([
-        fetchSubmissions(), fetchClasses(), fetchStudents(),
+      const [subs, cls, stu, enr] = await Promise.all([
+        fetchSubmissions(), fetchClasses(), fetchStudents(), fetchEnrollments(),
       ]);
       setSubmissions(subs);
       setClasses(cls);
       setStudents(stu);
+      setEnrollments(enr);
 
       /* Làm mới số liệu trang chủ. Khách vãng lai không có quyền ghi, nên đây
          là lần duy nhất public_stats được cập nhật — con số trên trang chủ trễ
@@ -120,6 +123,7 @@ export default function App() {
     setSubmissions([]);
     setClasses([]);
     setStudents([]);
+    setEnrollments([]);
     setActiveTab("home");
   };
 
@@ -173,6 +177,8 @@ export default function App() {
                     announcements={announcements}
                     classes={classes}
                     students={students}
+                    enrollments={enrollments}
+                    currentUid={user.uid}
                     studentsLoading={adminLoading}
                     onRefreshData={loadAdminData}
                   />

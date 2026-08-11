@@ -2,7 +2,11 @@ import React, { useState, useEffect } from "react";
 import { saveClass, deleteClass } from "../lib/repo/classes";
 import { createAnnouncement, deleteAnnouncement } from "../lib/repo/announcements";
 import { deleteSubmission } from "../lib/repo/submissions";
-import { SurveySubmission, Announcement, ClassRecord, Student } from "../types";
+import { SurveySubmission, Announcement, ClassRecord, Student, Enrollment } from "../types";
+import AssignmentBoard from "../features/classes/AssignmentBoard";
+import {
+  NewEnrollment, saveEnrollments, unenroll, fetchEnrollments, recountClassEnrollments,
+} from "../lib/repo/enrollments";
 import StudentProfileList from "../features/students/StudentProfileList";
 import DuplicateReview from "../features/students/DuplicateReview";
 import { migrateStudents, MigrateReport } from "../lib/migrate";
@@ -24,6 +28,8 @@ interface AdminDashboardProps {
   announcements: Announcement[];
   classes: ClassRecord[];
   students: Student[];
+  enrollments: Enrollment[];
+  currentUid: string;
   studentsLoading: boolean;
   onRefreshData: () => void;
 }
@@ -77,10 +83,11 @@ const emptyClass = {
 };
 
 export default function AdminDashboard({
-  submissions, announcements, classes, students, studentsLoading, onRefreshData,
+  submissions, announcements, classes, students, enrollments, currentUid,
+  studentsLoading, onRefreshData,
 }: AdminDashboardProps) {
   // Navigation tabs within Admin Panel
-  const [adminSubTab, setAdminSubTab] = useState<"students" | "classes" | "announcements">("students");
+  const [adminSubTab, setAdminSubTab] = useState<"students" | "assign" | "classes" | "announcements">("students");
 
   /* Ba chế độ xem trong tab Học viên. Hồ sơ là mặc định vì đó là đơn vị vận
      hành (một dòng một người); bảng phiếu giữ lại làm dữ liệu thô để đối chiếu. */
@@ -127,6 +134,44 @@ export default function AdminDashboard({
       alert("Không lưu được đánh dấu. Vui lòng thử lại.");
     } finally {
       setStudentActionBusy(false);
+    }
+  };
+
+  // ══ Phân lớp ══
+  const [assignSaving, setAssignSaving] = useState(false);
+
+  /* Sau khi ghi danh, enrolledCount của lớp đã cũ. Đọc lại ghi danh từ
+     Firestore rồi đếm lại, thay vì cộng trừ trong bộ nhớ — cộng trừ sẽ trôi
+     dần mỗi lần có lỗi giữa chừng. */
+  const refreshCountsThenReload = async () => {
+    const fresh = await fetchEnrollments();
+    await recountClassEnrollments(classes, fresh);
+    onRefreshData();
+  };
+
+  const handleSaveAssignments = async (rows: NewEnrollment[]) => {
+    setAssignSaving(true);
+    try {
+      await saveEnrollments(rows, currentUid);
+      await refreshCountsThenReload();
+    } catch (err) {
+      console.error("Lỗi khi lưu ghi danh: ", err);
+      alert("Không lưu được ghi danh. Kiểm tra quyền tài khoản và thử lại.");
+    } finally {
+      setAssignSaving(false);
+    }
+  };
+
+  const handleUnenroll = async (classId: string, studentId: string) => {
+    setAssignSaving(true);
+    try {
+      await unenroll(classId, studentId);
+      await refreshCountsThenReload();
+    } catch (err) {
+      console.error("Lỗi khi bỏ ghi danh: ", err);
+      alert("Không bỏ được ghi danh. Vui lòng thử lại.");
+    } finally {
+      setAssignSaving(false);
     }
   };
 
@@ -289,6 +334,7 @@ export default function AdminDashboard({
         <div className="inline-flex self-start rounded-field p-[3px] gap-0.5 bg-gradient-to-b from-[#E8F0F9] to-[#DCE8F4]">
           {[
             { id: "students", label: "Học viên", icon: Users },
+            { id: "assign", label: "Phân lớp", icon: Sparkles },
             { id: "classes", label: "Lớp học", icon: BookOpen },
             { id: "announcements", label: "Bảng tin", icon: BellRing }
           ].map(tab => (
@@ -558,6 +604,17 @@ export default function AdminDashboard({
             </div>
           )}
         </div>
+      )}
+
+      {adminSubTab === "assign" && (
+        <AssignmentBoard
+          students={students}
+          classes={classes}
+          enrollments={enrollments}
+          saving={assignSaving}
+          onSave={handleSaveAssignments}
+          onUnenroll={handleUnenroll}
+        />
       )}
 
       {/* 2. ACTIVE CLASSES MANAGEMENT */}
