@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import { saveClass, deleteClass } from "../lib/repo/classes";
 import { createAnnouncement, deleteAnnouncement } from "../lib/repo/announcements";
 import { deleteSubmission } from "../lib/repo/submissions";
-import { SurveySubmission, Announcement, ClassSession, Student } from "../types";
+import { SurveySubmission, Announcement, ClassRecord, Student } from "../types";
 import StudentProfileList from "../features/students/StudentProfileList";
 import DuplicateReview from "../features/students/DuplicateReview";
 import { migrateStudents, MigrateReport } from "../lib/migrate";
@@ -12,6 +12,7 @@ import { formatDateVN, formatTimeVN } from "../lib/datetime";
 import { useStudentFilters } from "../hooks/useStudentFilters";
 import StudentStats from "./StudentStats";
 import { computePublicStats } from "../lib/stats";
+import { DAY_OPTIONS, TIMEFRAME_OPTIONS, DURATION_OPTIONS } from "../lib/classSchedule";
 import StudentFilterBar from "./StudentFilterBar";
 import {
   LayoutDashboard, Users, FileText, Calendar, BellRing, Plus,
@@ -21,7 +22,7 @@ import {
 interface AdminDashboardProps {
   submissions: SurveySubmission[];
   announcements: Announcement[];
-  classes: ClassSession[];
+  classes: ClassRecord[];
   students: Student[];
   studentsLoading: boolean;
   onRefreshData: () => void;
@@ -61,6 +62,19 @@ function AnswerSection({ step, title, children }: {
 /** Gộp đáp án nhiều lựa chọn (kèm ô "Khác") thành một dòng chữ. */
 const listAnswer = (items: string[] | undefined, fallback: string, other?: string) =>
   [...(items || []), other].filter(Boolean).join(", ") || fallback;
+
+/* Trạng thái trống của form lớp. Tách ra hằng số để "Thêm mới" và "Hủy sửa"
+   dùng chung đúng một định nghĩa, không lệch nhau khi thêm trường mới. */
+const emptyClass = {
+  level: "L1" as "L1" | "L2" | "L3",
+  name: "",
+  instructor: "",
+  room: "",
+  capacity: 20,
+  status: "planning" as "planning" | "active" | "closed",
+  plannedSchedule: { days: [] as string[], timeframe: "", duration: "" },
+  enrolledCount: 0,
+};
 
 export default function AdminDashboard({
   submissions, announcements, classes, students, studentsLoading, onRefreshData,
@@ -117,14 +131,7 @@ export default function AdminDashboard({
   };
 
   // State for creating / editing a Class
-  const [newClass, setNewClass] = useState({
-    level: "L1" as "L1" | "L2" | "L3",
-    name: "",
-    schedule: "",
-    instructor: "",
-    room: "",
-    studentsCount: 0
-  });
+  const [newClass, setNewClass] = useState(emptyClass);
   // ID lớp đang sửa; null nghĩa là đang ở chế độ Thêm mới.
   const [editingClassId, setEditingClassId] = useState<string | null>(null);
 
@@ -170,27 +177,27 @@ export default function AdminDashboard({
   // Đưa form về trạng thái trống (chế độ Thêm mới)
   const resetClassForm = () => {
     setEditingClassId(null);
-    setNewClass({
-      level: "L1",
-      name: "",
-      schedule: "",
-      instructor: "",
-      room: "",
-      studentsCount: 0
-    });
+    setNewClass(emptyClass);
   };
 
   // Bắt đầu sửa một lớp: đổ dữ liệu vào form
-  const handleEditClass = (cls: ClassSession) => {
+  const handleEditClass = (cls: ClassRecord) => {
     if (!cls.id) return;
     setEditingClassId(cls.id);
     setNewClass({
       level: cls.level,
       name: cls.name,
-      schedule: cls.schedule,
       instructor: cls.instructor,
       room: cls.room,
-      studentsCount: cls.studentsCount
+      capacity: cls.capacity,
+      status: cls.status,
+      // Sao chép mảng: sửa form không được đụng vào dữ liệu đang hiển thị ở bảng.
+      plannedSchedule: {
+        days: [...(cls.plannedSchedule?.days || [])],
+        timeframe: cls.plannedSchedule?.timeframe || "",
+        duration: cls.plannedSchedule?.duration || "",
+      },
+      enrolledCount: cls.enrolledCount,
     });
     // Cuộn lên đầu để thấy form (trên mobile form nằm dưới danh sách).
     window.scrollTo({ top: 0, behavior: "smooth" });
@@ -199,8 +206,12 @@ export default function AdminDashboard({
   // Lưu lớp học: thêm mới hoặc cập nhật tùy theo editingClassId
   const handleSaveClass = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newClass.name || !newClass.schedule) {
-      alert("Vui lòng nhập tên lớp và lịch học!");
+    if (!newClass.name.trim()) {
+      alert("Vui lòng nhập tên lớp!");
+      return;
+    }
+    if (newClass.plannedSchedule.days.length === 0) {
+      alert("Vui lòng chọn ít nhất một ngày trong tuần cho lớp!");
       return;
     }
     setLoading(true);
@@ -571,12 +582,22 @@ export default function AdminDashboard({
                     }`}>
                       Level {cls.level}
                     </span>
-                    <span className="text-xs font-bold tnum text-ink-3">{cls.studentsCount} học viên</span>
+                    <span className="text-xs font-bold tnum text-ink-3">
+                      {cls.enrolledCount} / {cls.capacity} học viên
+                    </span>
                   </div>
 
                   <div>
                     <h4 className="font-bold text-ink text-sm leading-snug">{cls.name}</h4>
-                    <p className="text-xs text-ink-3 mt-1">{cls.schedule}</p>
+                    <p className="text-xs text-ink-3 mt-1">
+                      {cls.plannedSchedule.days.length > 0
+                        ? [
+                            cls.plannedSchedule.days.join(", "),
+                            cls.plannedSchedule.timeframe,
+                            cls.plannedSchedule.duration,
+                          ].filter(Boolean).join(" · ")
+                        : <span className="italic text-ink-4">Chưa khai lịch</span>}
+                    </p>
                   </div>
 
                   <div className="pt-2.5 border-t border-line-soft text-[11px] text-ink-3 space-y-1">
@@ -660,15 +681,86 @@ export default function AdminDashboard({
               </div>
 
               <div className="space-y-1">
-                <label className="font-bold text-ink-2">Lịch học chi tiết</label>
-                <input
-                  id="new-class-schedule"
-                  type="text"
-                  placeholder="08:30 - 10:30, Thứ Bảy hàng tuần"
-                  value={newClass.schedule}
-                  onChange={(e) => setNewClass(prev => ({ ...prev, schedule: e.target.value }))}
+                <label className="font-bold text-ink-2">Ngày trong tuần</label>
+                <div className="flex flex-wrap gap-2 pt-1">
+                  {DAY_OPTIONS.map(d => {
+                    const on = newClass.plannedSchedule.days.includes(d);
+                    return (
+                      <button
+                        key={d}
+                        id={`class-day-${d}`}
+                        type="button"
+                        onClick={() => setNewClass(prev => ({
+                          ...prev,
+                          plannedSchedule: {
+                            ...prev.plannedSchedule,
+                            days: on
+                              ? prev.plannedSchedule.days.filter(x => x !== d)
+                              : [...prev.plannedSchedule.days, d],
+                          },
+                        }))}
+                        className={`px-3 py-1.5 rounded-lg text-[13px] font-bold border transition-colors cursor-pointer ${
+                          on
+                            ? "border-brand-sky-deep bg-[#E4F4FD] text-brand-navy"
+                            : "border-line text-ink-3 hover:bg-white"
+                        }`}
+                      >
+                        {d}
+                      </button>
+                    );
+                  })}
+                </div>
+                {/* Khảo sát chỉ hỏi T2–T7, nên lớp Chủ Nhật không bao giờ khớp ngày với ai */}
+                {newClass.plannedSchedule.days.includes("CN") && (
+                  <p className="text-[12px] text-ink-4 pt-1">
+                    Khảo sát không hỏi Chủ Nhật, nên lớp này sẽ không khớp ngày với học viên nào khi xếp tự động.
+                  </p>
+                )}
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1">
+                  <label className="font-bold text-ink-2">Khung giờ</label>
+                  <select
+                    id="class-timeframe"
+                    value={newClass.plannedSchedule.timeframe}
+                    onChange={(e) => setNewClass(prev => ({
+                      ...prev, plannedSchedule: { ...prev.plannedSchedule, timeframe: e.target.value },
+                    }))}
+                    className="w-full p-2.5 rounded-lg border border-line"
+                  >
+                    <option value="">Chưa xác định</option>
+                    {TIMEFRAME_OPTIONS.map(t => <option key={t} value={t}>{t}</option>)}
+                  </select>
+                </div>
+                <div className="space-y-1">
+                  <label className="font-bold text-ink-2">Thời lượng</label>
+                  <select
+                    id="class-duration"
+                    value={newClass.plannedSchedule.duration}
+                    onChange={(e) => setNewClass(prev => ({
+                      ...prev, plannedSchedule: { ...prev.plannedSchedule, duration: e.target.value },
+                    }))}
+                    className="w-full p-2.5 rounded-lg border border-line"
+                  >
+                    <option value="">Chưa xác định</option>
+                    {DURATION_OPTIONS.map(t => <option key={t} value={t}>{t}</option>)}
+                  </select>
+                </div>
+              </div>
+
+              <div className="space-y-1">
+                <label className="font-bold text-ink-2">Trạng thái</label>
+                <select
+                  id="class-status"
+                  value={newClass.status}
+                  onChange={(e) => setNewClass(prev => ({ ...prev, status: e.target.value as typeof prev.status }))}
                   className="w-full p-2.5 rounded-lg border border-line"
-                />
+                >
+                  <option value="planning">Đang chuẩn bị</option>
+                  <option value="active">Đang học</option>
+                  <option value="closed">Đã đóng</option>
+                </select>
               </div>
 
               <div className="space-y-1">
@@ -696,12 +788,13 @@ export default function AdminDashboard({
               </div>
 
               <div className="space-y-1">
-                <label className="font-bold text-ink-2">Số lượng học viên dự kiến</label>
+                <label className="font-bold text-ink-2">Sức chứa tối đa</label>
                 <input
-                  id="new-class-count"
+                  id="new-class-capacity"
                   type="number"
-                  value={newClass.studentsCount || ""}
-                  onChange={(e) => setNewClass(prev => ({ ...prev, studentsCount: parseInt(e.target.value) || 0 }))}
+                  min={0}
+                  value={newClass.capacity || ""}
+                  onChange={(e) => setNewClass(prev => ({ ...prev, capacity: parseInt(e.target.value) || 0 }))}
                   className="w-full p-2.5 rounded-lg border border-line tnum"
                 />
               </div>

@@ -36,14 +36,45 @@ export interface Announcement {
   createdAt: any;
 }
 
-export interface ClassSession {
+export interface ClassPlannedSchedule {
+  days: string[];        // "T2".."T7" và "CN" (lớp có thể học Chủ Nhật, khảo sát thì không hỏi)
+  timeframe: string;     // "Sáng" | "Chiều" | "Tối" | "" khi chưa xác định
+  duration: string;      // "90 phút" | "120 phút" | "" khi chưa xác định
+}
+
+/* Một lớp học. plannedSchedule là KHUNG LỊCH DỰ KIẾN — chỉ dùng để so khớp
+   với lịch rảnh của học viên và để hiển thị. Nó không sinh ra buổi học;
+   buổi học được tạo thủ công ở GĐ4. */
+export interface ClassRecord {
   id?: string;
   level: "L1" | "L2" | "L3";
   name: string;
-  schedule: string;
   instructor: string;
   room: string;
-  studentsCount: number;
+  capacity: number;
+  plannedSchedule: ClassPlannedSchedule;
+  status: "planning" | "active" | "closed";   // bảng xếp lớp chỉ hiện planning và active
+  /* Số phi chuẩn hóa. Nguồn sự thật là số document enrollments có
+     status == "enrolled"; ghi danh xong thì đếm lại bằng recountClassEnrollments. */
+  enrolledCount: number;
+  createdAt?: any;
+  updatedAt?: any;
+}
+
+export type EnrollmentStatus = "enrolled" | "transferred" | "dropped";
+
+/* Document ID = `${classId}_${studentId}`, nên ghi danh trùng là bất khả thi
+   ở tầng lưu trữ chứ không chỉ ở tầng giao diện. */
+export interface Enrollment {
+  id?: string;
+  classId: string;
+  studentId: string;
+  level: "L1" | "L2" | "L3";   // chép lại để lọc mà không phải join
+  status: EnrollmentStatus;
+  matchScore: number | null;    // null khi giáo vụ xếp tay
+  matchReason: string | null;
+  enrolledAt: any;
+  enrolledBy: string;           // uid người thao tác
 }
 
 export interface StudentAvailability {

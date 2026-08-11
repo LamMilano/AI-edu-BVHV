@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import {
-  SurveySubmission, Announcement, ClassSession, PublicStatsData, AuthUser, Student,
+  SurveySubmission, Announcement, ClassRecord, PublicStatsData, AuthUser, Student,
 } from "./types";
 import Navigation from "./components/Navigation";
 import HomePortal from "./components/HomePortal";
@@ -34,7 +34,7 @@ export default function App() {
 
   // Dữ liệu quản trị: chỉ nạp sau khi đăng nhập và mở tab Quản trị.
   const [submissions, setSubmissions] = useState<SurveySubmission[]>([]);
-  const [classes, setClasses] = useState<ClassSession[]>([]);
+  const [classes, setClasses] = useState<ClassRecord[]>([]);
   const [students, setStudents] = useState<Student[]>([]);
   const [adminLoading, setAdminLoading] = useState(false);
 

@@ -13,7 +13,7 @@ export interface MigrateReport {
 /* Dựng lại toàn bộ hồ sơ học viên từ phiếu khảo sát. Chạy được nhiều lần:
    Document ID là email nên lần sau chỉ cập nhật, không nhân đôi. Gọi tay từ
    màn Quản trị chứ KHÔNG tự chạy khi tải trang — tự chạy là kiểu lỗi đã gặp
-   với seedInitialData trước đây (xem chú thích cũ ở src/lib/seed.ts). */
+   với hàm seed dữ liệu mẫu trước đây: nó chạy lại mỗi lần tải trang. */
 export async function migrateStudents(): Promise<MigrateReport> {
   const submissions = await fetchSubmissions();
   const { drafts, skipped } = buildStudentsFromSubmissions(submissions);
