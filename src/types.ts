@@ -61,6 +61,35 @@ export interface ClassRecord {
   updatedAt?: any;
 }
 
+export type AttendanceStatus = "present" | "late" | "excused" | "absent";
+
+/* Một buổi học. records nhúng thẳng trong document buổi: cả lớp lưu được
+   trong MỘT lượt ghi, nên không có trạng thái "lưu dở nửa lớp". Đánh đổi:
+   báo cáo chuyên cần của một học viên phải đọc hết các buổi — chấp nhận
+   được ở quy mô vài chục buổi mỗi lớp. */
+export interface Session {
+  id?: string;
+  classId: string;
+  date: string;          // "2026-08-20" — ISO nên sắp xếp được bằng chuỗi
+  startTime: string;     // "18:00"
+  durationMin: number;
+  topic: string;
+  status: "scheduled" | "done" | "cancelled";
+  records: Record<string, AttendanceStatus>;   // studentId → trạng thái
+  note: string;
+  takenBy: string | null;   // uid người điểm danh
+  takenAt: any;             // Firestore Timestamp | null
+  createdAt: any;
+}
+
+export interface AttendanceSummary {
+  present: number;
+  late: number;
+  excused: number;
+  absent: number;
+  total: number;
+}
+
 export type EnrollmentStatus = "enrolled" | "transferred" | "dropped";
 
 /* Document ID = `${classId}_${studentId}`, nên ghi danh trùng là bất khả thi

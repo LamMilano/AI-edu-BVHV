@@ -67,9 +67,7 @@ export async function markNotDuplicate(idA: string, idB: string): Promise<void> 
    Ghi danh của dropId phải được trỏ sang keepId TRƯỚC khi xóa hồ sơ, nếu
    không những bản ghi đó thành mồ côi — trỏ tới một học viên không còn tồn
    tại, và học viên đó biến mất khỏi danh sách lớp mà không ai biết vì sao.
-
-   GĐ4: khi có collection sessions, hàm này còn phải đổi khóa trong
-   sessions.records từ dropId sang keepId. */
+   Điểm danh cũng vậy: sessions.records dùng studentId làm KHÓA. */
 export async function mergeStudents(keepId: string, dropId: string): Promise<void> {
   const dropSnap = await getDoc(doc(db, COL, dropId));
   const dropData = dropSnap.exists() ? (dropSnap.data() as Student) : null;
@@ -103,6 +101,32 @@ export async function mergeStudents(keepId: string, dropId: string): Promise<voi
     }
     batch.delete(enr.ref);
   });
+
+  /* Điểm danh nhúng trong sessions.records với KHÓA là studentId, nên gộp hồ
+     sơ mà không đổi khóa là lịch sử điểm danh của người bị gộp biến mất.
+     Chỉ động tới buổi của những lớp người đó từng ghi danh. */
+  const dropClassIds = new Set(
+    dropEnrollments.docs.map(d => (d.data() as { classId: string }).classId)
+  );
+
+  if (dropClassIds.size > 0) {
+    const sessionsSnap = await getDocs(collection(db, "sessions"));
+    for (const ses of sessionsSnap.docs) {
+      const data = ses.data() as { classId?: string; records?: Record<string, string> };
+      if (!data.classId || !dropClassIds.has(data.classId)) continue;
+
+      const records = data.records || {};
+      if (!(dropId in records)) continue;
+
+      const next = { ...records };
+      /* Người giữ lại đã có trạng thái ở buổi này thì giữ của họ: đó là bản
+         ghi giảng viên đã nhìn thấy và xác nhận trên màn hình. */
+      if (!(keepId in next)) next[keepId] = records[dropId];
+      delete next[dropId];
+
+      batch.update(ses.ref, { records: next });
+    }
+  }
 
   batch.update(doc(db, COL, keepId), {
     mergedFrom: arrayUnion(dropId, ...(dropData?.mergedFrom || [])),
