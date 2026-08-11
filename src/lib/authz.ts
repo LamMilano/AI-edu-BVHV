@@ -11,7 +11,7 @@ import {
   type User,
 } from "firebase/auth";
 import { doc, getDoc } from "firebase/firestore";
-import { auth, db } from "./firebase";
+import { auth, db, databaseId } from "./firebase";
 import { AuthUser, Role } from "../types";
 
 /* Sai email và sai mật khẩu cố tình dùng chung một câu: nếu tách ra,
@@ -24,27 +24,73 @@ const MESSAGES: Record<string, string> = {
   "auth/invalid-credential": "Email hoặc mật khẩu không đúng.",
   "auth/too-many-requests": "Sai quá nhiều lần. Vui lòng thử lại sau ít phút.",
   "auth/network-request-failed": "Không có kết nối mạng. Kiểm tra lại đường truyền.",
-  "auth/no-role": "Tài khoản chưa được cấp quyền. Liên hệ quản trị viên.",
+  "auth/no-role": "Tài khoản chưa được cấp quyền.",
+  /* Rules đã publish nhưng chặn cả việc đọc chính hồ sơ của mình — thường là
+     publish nhầm sang database khác, hoặc thiếu hẳn khối match /users/{uid}. */
+  "permission-denied": "Không đọc được phân quyền: Firestore Rules đang chặn. Kiểm tra rules đã publish đúng database chưa.",
 };
 
 export function authErrorMessage(code: string): string {
   return MESSAGES[code] || "Đăng nhập không thành công. Vui lòng thử lại.";
 }
 
-/* Đọc vai trò. Trả null khi chưa có document users/{uid} hoặc vai trò
-   không hợp lệ — tài khoản đăng nhập được nhưng chưa được cấp quyền. */
-async function loadRole(user: User): Promise<AuthUser | null> {
-  const snap = await getDoc(doc(db, "users", user.uid));
-  if (!snap.exists()) return null;
+/* Giá trị role do người vận hành gõ tay vào Firebase Console, nên chuẩn hóa
+   khoảng trắng và hoa/thường trước khi so. "Admin" là ý đúng, đừng bắt họ
+   đoán rằng hệ thống phân biệt chữ hoa. */
+export function normalizeRole(raw: unknown): Role | null {
+  const v = String(raw ?? "").trim().toLowerCase();
+  return v === "admin" || v === "teacher" ? v : null;
+}
 
-  const data = snap.data() as { role?: string; displayName?: string; email?: string };
-  if (data.role !== "admin" && data.role !== "teacher") return null;
+/* Vì sao không lấy được vai trò. Mang đủ dữ kiện để màn đăng nhập chỉ ra
+   chính xác phải tạo cái gì, ở đâu — thay vì để người vận hành đoán giữa
+   "chưa tạo document", "tạo nhầm database" và "gõ sai role". */
+export interface RoleIssue {
+  reason: "no-doc" | "bad-role";
+  uid: string;
+  databaseId: string;
+  foundRole?: string;
+}
+
+export class RoleNotGrantedError extends Error {
+  code = "auth/no-role";
+  issue: RoleIssue;
+  constructor(issue: RoleIssue) {
+    super("no-role");
+    this.name = "RoleNotGrantedError";
+    this.issue = issue;
+  }
+}
+
+type RoleResult = { user: AuthUser; issue?: undefined } | { user?: undefined; issue: RoleIssue };
+
+async function loadRole(user: User): Promise<RoleResult> {
+  const snap = await getDoc(doc(db, "users", user.uid));
+
+  if (!snap.exists()) {
+    return { issue: { reason: "no-doc", uid: user.uid, databaseId } };
+  }
+
+  const data = snap.data() as { role?: unknown; displayName?: string; email?: string };
+  const role = normalizeRole(data.role);
+  if (!role) {
+    return {
+      issue: {
+        reason: "bad-role",
+        uid: user.uid,
+        databaseId,
+        foundRole: String(data.role ?? ""),
+      },
+    };
+  }
 
   return {
-    uid: user.uid,
-    email: data.email || user.email || "",
-    displayName: data.displayName || user.email || "",
-    role: data.role as Role,
+    user: {
+      uid: user.uid,
+      email: data.email || user.email || "",
+      displayName: data.displayName || user.email || "",
+      role,
+    },
   };
 }
 
@@ -56,15 +102,15 @@ export function onAuthChange(cb: (user: AuthUser | null) => void): () => void {
       return;
     }
     try {
-      const authed = await loadRole(user);
-      if (!authed) {
+      const result = await loadRole(user);
+      if (!result.user) {
         // Có phiên Auth nhưng không có vai trò: đăng xuất để không kẹt ở
         // trạng thái nửa vời (đăng nhập rồi mà mọi lệnh đọc đều bị từ chối).
         await signOut(auth);
         cb(null);
         return;
       }
-      cb(authed);
+      cb(result.user);
     } catch {
       cb(null);
     }
@@ -76,12 +122,10 @@ export async function signIn(email: string, password: string): Promise<void> {
   await setPersistence(auth, browserLocalPersistence);
   const cred = await signInWithEmailAndPassword(auth, email.trim(), password);
 
-  const authed = await loadRole(cred.user);
-  if (!authed) {
+  const result = await loadRole(cred.user);
+  if (!result.user) {
     await signOut(auth);
-    const err = new Error("no-role") as Error & { code: string };
-    err.code = "auth/no-role";
-    throw err;
+    throw new RoleNotGrantedError(result.issue);
   }
 }
 

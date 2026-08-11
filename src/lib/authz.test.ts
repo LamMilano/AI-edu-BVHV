@@ -1,5 +1,25 @@
 import { describe, it, expect } from "vitest";
-import { authErrorMessage } from "./authz";
+import { authErrorMessage, normalizeRole } from "./authz";
+
+describe("normalizeRole", () => {
+  it("chấp nhận giá trị đúng", () => {
+    expect(normalizeRole("admin")).toBe("admin");
+    expect(normalizeRole("teacher")).toBe("teacher");
+  });
+
+  it("bỏ qua hoa/thường và khoảng trắng thừa, vì giá trị này gõ tay vào Console", () => {
+    expect(normalizeRole("  Admin ")).toBe("admin");
+    expect(normalizeRole("TEACHER")).toBe("teacher");
+  });
+
+  it("trả null cho vai trò lạ, thiếu, hoặc sai kiểu", () => {
+    expect(normalizeRole("giao vu")).toBeNull();
+    expect(normalizeRole("")).toBeNull();
+    expect(normalizeRole(undefined)).toBeNull();
+    expect(normalizeRole(null)).toBeNull();
+    expect(normalizeRole(1)).toBeNull();
+  });
+});
 
 describe("authErrorMessage", () => {
   it("trả cùng một câu cho sai email và sai mật khẩu, để không lộ email nào có thật", () => {
@@ -22,8 +42,13 @@ describe("authErrorMessage", () => {
   });
 
   it("nói rõ khi tài khoản đăng nhập được nhưng chưa được cấp vai trò", () => {
-    expect(authErrorMessage("auth/no-role"))
-      .toBe("Tài khoản chưa được cấp quyền. Liên hệ quản trị viên.");
+    expect(authErrorMessage("auth/no-role")).toBe("Tài khoản chưa được cấp quyền.");
+  });
+
+  it("phân biệt rules chặn với thiếu vai trò — hai nguyên nhân, hai cách sửa", () => {
+    expect(authErrorMessage("permission-denied"))
+      .not.toBe(authErrorMessage("auth/no-role"));
+    expect(authErrorMessage("permission-denied")).toContain("Rules");
   });
 
   it("có câu dự phòng cho mã lỗi lạ", () => {

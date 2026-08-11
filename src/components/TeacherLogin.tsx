@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { Lock, ShieldCheck, Eye, EyeOff, AlertCircle, Loader2 } from "lucide-react";
-import { signIn, authErrorMessage } from "../lib/authz";
+import { signIn, authErrorMessage, RoleNotGrantedError, RoleIssue } from "../lib/authz";
 
 interface TeacherLoginProps {
   onSuccess: () => void;
@@ -11,6 +11,7 @@ export default function TeacherLogin({ onSuccess }: TeacherLoginProps) {
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [issue, setIssue] = useState<RoleIssue | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -19,12 +20,17 @@ export default function TeacherLogin({ onSuccess }: TeacherLoginProps) {
 
     setSubmitting(true);
     setError(null);
+    setIssue(null);
     try {
       await signIn(email, password);
       onSuccess();
     } catch (err) {
       const code = (err as { code?: string }).code || "";
       setError(authErrorMessage(code));
+      /* Thiếu vai trò là lỗi VẬN HÀNH, không phải người dùng gõ sai. Hiện đủ
+         uid và database để người cấp quyền tạo document ngay, thay vì phải
+         mở file cấu hình dò xem app đang đọc database nào. */
+      if (err instanceof RoleNotGrantedError) setIssue(err.issue);
       // Xóa mật khẩu nhưng GIỮ email: gõ lại email mỗi lần sai rất phiền.
       setPassword("");
     } finally {
@@ -98,6 +104,41 @@ export default function TeacherLogin({ onSuccess }: TeacherLoginProps) {
               <AlertCircle className="w-4 h-4 flex-none" />
               {error}
             </p>
+          )}
+
+          {issue && (
+            <div className="rounded-field border border-line-soft bg-[#F6FAFD] p-3.5 space-y-2.5 text-[12.5px] text-ink-2">
+              <p className="font-semibold text-ink">
+                {issue.reason === "no-doc"
+                  ? "Đăng nhập đã thành công, nhưng chưa có hồ sơ phân quyền cho tài khoản này."
+                  : `Đã có hồ sơ phân quyền, nhưng giá trị role không hợp lệ: “${issue.foundRole}”.`}
+              </p>
+
+              <p className="text-ink-3 leading-relaxed">
+                Trong Firebase Console → Firestore, <strong>chọn đúng database</strong> dưới đây
+                (Console luôn mở sẵn <code>(default)</code> — app không đọc database đó), rồi tạo
+                document trong collection <code>users</code>:
+              </p>
+
+              <dl className="space-y-1.5">
+                <div>
+                  <dt className="text-[10.5px] font-extrabold text-ink-4 uppercase tracking-[0.08em]">Database</dt>
+                  <dd className="font-mono text-[11.5px] break-all select-all">{issue.databaseId}</dd>
+                </div>
+                <div>
+                  <dt className="text-[10.5px] font-extrabold text-ink-4 uppercase tracking-[0.08em]">Document ID</dt>
+                  <dd className="font-mono text-[11.5px] break-all select-all">{issue.uid}</dd>
+                </div>
+                <div>
+                  <dt className="text-[10.5px] font-extrabold text-ink-4 uppercase tracking-[0.08em]">Trường bắt buộc</dt>
+                  <dd className="font-mono text-[11.5px]">role = admin</dd>
+                </div>
+              </dl>
+
+              <p className="text-ink-4 text-[11.5px] leading-relaxed">
+                Document ID phải là chuỗi ở trên, không phải email. Chạm vào để bôi đen rồi sao chép.
+              </p>
+            </div>
           )}
 
           <button
