@@ -1,9 +1,10 @@
 import React, { useMemo, useState } from "react";
 import { Student, ClassRecord, Enrollment } from "../../types";
-import { rankClassesForStudent } from "../../lib/matching";
+import { rankClassesForStudent, scoreClassForStudent } from "../../lib/matching";
+import { addStudentsToClass, filterStudents } from "../../lib/bulkAssign";
 import { NewEnrollment } from "../../lib/repo/enrollments";
 import { LEVEL_IDS, LEVEL_LABEL, LEVEL_RAMP, LevelId } from "../../lib/levels";
-import { Wand2, Save, X, Trash2, Users } from "lucide-react";
+import { Wand2, Save, X, Trash2, Users, Plus, Check, Search, Inbox } from "lucide-react";
 
 interface Props {
   students: Student[];
@@ -23,6 +24,12 @@ export default function AssignmentBoard({
      "Lưu tất cả" — tải lại trang là mất hết, và đó chính là ý muốn: xếp sai
      thì chỉ cần bỏ đi, không phải đi sửa dữ liệu đã ghi. */
   const [drafts, setDrafts] = useState<Record<string, string>>({});
+
+  /* Lớp "đang nhận": chọn lớp đích trước, rồi bấm từng học viên cho nhanh —
+     xếp một lớp 20 người bằng dropdown là 40+ lần click, kiểu này chỉ còn 20. */
+  const [targetClassId, setTargetClassId] = useState<string | null>(null);
+  const [query, setQuery] = useState("");
+  const [notice, setNotice] = useState("");
 
   // Ghi danh đang hiệu lực, tra ngược theo học viên.
   const enrolledByStudent = useMemo(() => {
@@ -51,6 +58,53 @@ export default function AssignmentBoard({
   const remainingOf = (cls: ClassRecord) => {
     const drafted = Object.values(drafts).filter(cid => cid === cls.id).length;
     return cls.capacity - cls.enrolledCount - drafted;
+  };
+
+  /* Lớp đích lấy từ levelClasses, nên đổi cấp độ là tự rơi về null — không thể
+     lỡ tay nhận học viên L1 vào một lớp L3 còn sót lại trong state. */
+  const targetClass = levelClasses.find(c => c.id === targetClassId) || null;
+  const targetRemaining = targetClass ? remainingOf(targetClass) : 0;
+
+  // Điểm khớp với lớp đích, chấm sẵn một lượt để vừa sắp xếp vừa hiển thị.
+  const targetScores = useMemo(() => {
+    const map = new Map<string, number>();
+    if (targetClass) {
+      for (const s of unassigned) map.set(s.id!, scoreClassForStudent(s, targetClass).score);
+    }
+    return map;
+  }, [unassigned, targetClass]);
+
+  /* Danh sách đang hiển thị bên trái: lọc theo từ khoá, và khi đã chọn lớp đích
+     thì đẩy người khớp lịch nhất lên đầu để bấm từ trên xuống là xong. */
+  const visible = useMemo(() => {
+    const list = filterStudents(unassigned, query);
+    if (!targetClass) return list;
+    return [...list].sort((a, b) => (targetScores.get(b.id!) ?? 0) - (targetScores.get(a.id!) ?? 0));
+  }, [unassigned, query, targetClass, targetScores]);
+
+  const addToTarget = (ids: string[]) => {
+    if (!targetClass) return;
+    const r = addStudentsToClass(drafts, ids, targetClass.id!, targetRemaining);
+    setDrafts(r.drafts);
+    setNotice(
+      r.skipped > 0
+        ? `${targetClass.name} đã đầy — thêm được ${r.added} người, còn ${r.skipped} người chưa xếp.`
+        : ""
+    );
+  };
+
+  const removeFromDrafts = (studentId: string) => {
+    setDrafts(prev => {
+      const next = { ...prev };
+      delete next[studentId];
+      return next;
+    });
+    setNotice("");
+  };
+
+  const pickTarget = (classId: string) => {
+    setTargetClassId(prev => (prev === classId ? null : classId));
+    setNotice("");
   };
 
   const autoAssign = () => {
@@ -99,7 +153,10 @@ export default function AssignmentBoard({
               <button
                 key={id}
                 id={`assign-level-${id}`}
-                onClick={() => { setLevel(id); setDrafts({}); }}
+                onClick={() => {
+                  setLevel(id); setDrafts({});
+                  setTargetClassId(null); setQuery(""); setNotice("");
+                }}
                 className={`px-3.5 py-1.5 text-[12.5px] font-bold rounded-[7px] transition-all cursor-pointer ${
                   level === id
                     ? "bg-gradient-to-b from-white to-[#F6FAFD] text-brand-navy shadow-[0_2px_6px_-2px_rgb(20_51_110/0.3)]"
@@ -134,7 +191,7 @@ export default function AssignmentBoard({
               </button>
               <button
                 id="btn-clear-drafts"
-                onClick={() => setDrafts({})}
+                onClick={() => { setDrafts({}); setNotice(""); }}
                 disabled={saving}
                 className="flex items-center gap-1.5 px-3 py-2 text-[12.5px] font-semibold text-ink-3 hover:text-ink transition-colors cursor-pointer"
               >
@@ -157,6 +214,7 @@ export default function AssignmentBoard({
         <div className="surface p-5 space-y-3">
           <h4 className="text-[10.5px] font-extrabold text-ink-4 uppercase tracking-[0.09em]">
             Chưa xếp lớp · {unassigned.length} học viên
+            {query.trim() && ` · đang hiện ${visible.length}`}
           </h4>
 
           {unassigned.length === 0 ? (
@@ -164,11 +222,71 @@ export default function AssignmentBoard({
               Mọi học viên {LEVEL_LABEL[level]} đều đã có lớp.
             </p>
           ) : (
-            <div className="space-y-2 max-h-[560px] overflow-y-auto">
-              {unassigned.map(s => {
+            <>
+              <div className="relative">
+                <Search className="w-3.5 h-3.5 text-ink-4 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+                <input
+                  id="assign-search"
+                  value={query}
+                  onChange={(e) => setQuery(e.target.value)}
+                  placeholder="Tìm theo tên hoặc khoa/phòng — gõ không dấu cũng được"
+                  className="field w-full pl-9 pr-9 py-2 text-[12.5px]"
+                />
+                {query && (
+                  <button
+                    id="btn-clear-search"
+                    onClick={() => setQuery("")}
+                    className="absolute right-2.5 top-1/2 -translate-y-1/2 text-ink-4 hover:text-ink transition-colors cursor-pointer"
+                    aria-label="Xoá từ khoá"
+                  >
+                    <X className="w-3.5 h-3.5" />
+                  </button>
+                )}
+              </div>
+
+              {/* Thanh chỉ hiện khi đã chọn lớp đích bên phải. */}
+              {targetClass && (
+                <div className="rounded-field border border-brand-sky-deep bg-[#F2F9FE] px-3.5 py-2.5 space-y-2">
+                  <div className="flex items-center justify-between gap-3">
+                    <span className="text-[12.5px] text-ink-2 min-w-0 truncate">
+                      Đang nhận vào <b className="text-brand-navy">{targetClass.name}</b>
+                      <span className="text-ink-3"> · còn {Math.max(0, targetRemaining)} chỗ</span>
+                    </span>
+                    <button
+                      id="btn-exit-target"
+                      onClick={() => pickTarget(targetClass.id!)}
+                      className="text-[12px] font-semibold text-ink-3 hover:text-ink transition-colors cursor-pointer flex-none"
+                    >
+                      Thoát
+                    </button>
+                  </div>
+                  <button
+                    id="btn-add-all-visible"
+                    onClick={() => addToTarget(visible.map(s => s.id!))}
+                    disabled={targetRemaining <= 0 || visible.length === 0}
+                    className="btn-primary w-full flex items-center justify-center gap-1.5 px-3 py-2 text-[12.5px] cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    <Inbox className="w-3.5 h-3.5" />
+                    {targetRemaining <= 0
+                      ? "Lớp đã đầy"
+                      : `Thêm hết ${visible.length} người đang hiện vào lớp này`}
+                  </button>
+                </div>
+              )}
+
+              {notice && <p className="text-[12.5px] font-semibold text-danger">{notice}</p>}
+
+              {visible.length === 0 ? (
+                <p className="py-8 text-center text-[13px] text-ink-4 italic">
+                  Không có ai khớp “{query}”.
+                </p>
+              ) : (
+              <div className="space-y-2 max-h-[560px] overflow-y-auto">
+                {visible.map(s => {
                 const draftClassId = drafts[s.id!];
                 const ranked = rankClassesForStudent(s, levelClasses);
                 const suggestion = ranked.find(r => r.classId === draftClassId);
+                const inTarget = !!targetClass && draftClassId === targetClass.id;
 
                 return (
                   <div
@@ -189,11 +307,44 @@ export default function AssignmentBoard({
                             : "Chưa có dữ liệu lịch rảnh"}
                         </span>
                       </div>
-                      {suggestion && (
-                        <span className="text-[11px] font-extrabold tnum text-brand-sky-deep flex-none">
-                          {suggestion.score}%
-                        </span>
-                      )}
+                      <div className="flex items-center gap-2 flex-none">
+                        {/* Chưa chọn lớp đích thì chỉ hiện % của lớp đang nháp;
+                            đã chọn thì hiện % so với chính lớp đích. */}
+                        {targetClass ? (
+                          <span className="text-[11px] font-extrabold tnum text-brand-sky-deep">
+                            {targetScores.get(s.id!) ?? 0}%
+                          </span>
+                        ) : suggestion && (
+                          <span className="text-[11px] font-extrabold tnum text-brand-sky-deep">
+                            {suggestion.score}%
+                          </span>
+                        )}
+
+                        {targetClass && (
+                          inTarget ? (
+                            <button
+                              id={`btn-remove-${s.id}`}
+                              onClick={() => removeFromDrafts(s.id!)}
+                              title="Bỏ khỏi lớp đang nhận"
+                              className="w-8 h-8 grid place-items-center rounded-field bg-brand-sky-deep text-white hover:bg-brand-navy transition-colors cursor-pointer"
+                              aria-label={`Bỏ ${s.fullName} khỏi ${targetClass.name}`}
+                            >
+                              <Check className="w-4 h-4" />
+                            </button>
+                          ) : (
+                            <button
+                              id={`btn-add-${s.id}`}
+                              onClick={() => addToTarget([s.id!])}
+                              disabled={targetRemaining <= 0}
+                              title={targetRemaining <= 0 ? "Lớp đã đầy" : `Thêm vào ${targetClass.name}`}
+                              className="w-8 h-8 grid place-items-center rounded-field border border-brand-sky-deep text-brand-sky-deep hover:bg-white transition-colors cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
+                              aria-label={`Thêm ${s.fullName} vào ${targetClass.name}`}
+                            >
+                              <Plus className="w-4 h-4" />
+                            </button>
+                          )
+                        )}
+                      </div>
                     </div>
 
                     <select
@@ -224,8 +375,10 @@ export default function AssignmentBoard({
                     )}
                   </div>
                 );
-              })}
-            </div>
+                })}
+              </div>
+              )}
+            </>
           )}
         </div>
 
@@ -239,9 +392,16 @@ export default function AssignmentBoard({
             levelClasses.map(c => {
               const members = enrollments.filter(e => e.classId === c.id && e.status === "enrolled");
               const drafted = Object.entries(drafts).filter(([, cid]) => cid === c.id);
+              const isTarget = targetClassId === c.id;
+              const full = remainingOf(c) <= 0;
 
               return (
-                <div key={c.id} className="surface p-5 space-y-3">
+                <div
+                  key={c.id}
+                  className={`surface p-5 space-y-3 transition-shadow ${
+                    isTarget ? "ring-2 ring-brand-sky-deep" : ""
+                  }`}
+                >
                   <div className="flex items-start justify-between gap-3">
                     <div className="min-w-0">
                       <h4 className="text-[14px] font-extrabold tracking-tight truncate">{c.name}</h4>
@@ -256,6 +416,23 @@ export default function AssignmentBoard({
                       {members.length + drafted.length} / {c.capacity}
                     </span>
                   </div>
+
+                  {/* Bật/tắt chế độ bấm-để-thêm cho đúng lớp này. */}
+                  <button
+                    id={`btn-target-${c.id}`}
+                    onClick={() => pickTarget(c.id!)}
+                    disabled={full && !isTarget}
+                    className={`w-full flex items-center justify-center gap-1.5 px-3 py-2 text-[12.5px] font-bold rounded-field transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed ${
+                      isTarget
+                        ? "bg-brand-sky-deep text-white hover:bg-brand-navy"
+                        : "border border-line-soft text-brand-navy hover:bg-white"
+                    }`}
+                  >
+                    {isTarget ? <Check className="w-3.5 h-3.5" /> : <Plus className="w-3.5 h-3.5" />}
+                    {isTarget
+                      ? "Đang nhận — bấm để thoát"
+                      : full ? "Lớp đã đầy" : "Nhận học viên vào lớp này"}
+                  </button>
 
                   {members.length === 0 && drafted.length === 0 ? (
                     <p className="text-[12.5px] text-ink-4 italic flex items-center gap-1.5">
