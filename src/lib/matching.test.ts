@@ -24,10 +24,16 @@ describe("scoreClassForStudent", () => {
     expect(r.score).toBe(100);
   });
 
-  it("khác cấp độ thì loại thẳng, không chấm điểm", () => {
+  it("lớp cao hơn cấp tham chiếu thì loại thẳng, không chấm điểm", () => {
     const r = scoreClassForStudent(student({ currentLevel: "L1" }), cls({ level: "L3" }));
     expect(r.eligible).toBe(false);
-    expect(r.reason).toBe("Khác cấp độ");
+    expect(r.reason).toBe("Cao hơn cấp tham chiếu");
+  });
+
+  it("học viên C3 vẫn học được lớp C1 — cấp khảo sát chỉ là đích lộ trình", () => {
+    const r = scoreClassForStudent(student({ currentLevel: "L3" }), cls({ level: "L1" }));
+    expect(r.eligible).toBe(true);
+    expect(r.score).toBe(100);
   });
 
   it("lớp đã đầy thì loại thẳng", () => {

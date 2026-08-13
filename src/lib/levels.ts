@@ -16,3 +16,18 @@ export const LEVEL_LABEL: Record<LevelId, string> = {
 };
 
 export const LEVEL_IDS: LevelId[] = ["L1", "L2", "L3"];
+
+/* Cấp độ là LỘ TRÌNH TÍCH LŨY, không phải ngăn kéo. Kết quả khảo sát chỉ nói
+   người này học TỚI đâu; ai cũng bắt đầu từ Cấp độ 1. Nên học viên C3 học
+   được lớp C1 và C2, còn học viên C1 thì không với tới lớp C2. */
+export const LEVEL_RANK: Record<LevelId, number> = { L1: 1, L2: 2, L3: 3 };
+
+/* Hồ sơ cũ có thể thiếu cấp độ. Coi như C1 thay vì loại khỏi mọi lớp: sót
+   người trong danh sách chờ xếp thì giáo vụ còn thấy mà xử lý, chứ biến mất
+   hẳn thì không ai biết. */
+const rankOf = (id: LevelId): number => LEVEL_RANK[id] ?? LEVEL_RANK.L1;
+
+/** Học viên có cấp tham chiếu `refLevel` được học lớp cấp `classLevel` không. */
+export function canStudy(refLevel: LevelId, classLevel: LevelId): boolean {
+  return rankOf(classLevel) <= rankOf(refLevel);
+}

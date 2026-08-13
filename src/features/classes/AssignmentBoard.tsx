@@ -2,6 +2,7 @@ import React, { useMemo, useState } from "react";
 import { Student, ClassRecord, Enrollment } from "../../types";
 import { rankClassesForStudent, scoreClassForStudent } from "../../lib/matching";
 import { addStudentsToClass, filterStudents } from "../../lib/bulkAssign";
+import { poolForLevel } from "../../lib/assignPool";
 import { NewEnrollment } from "../../lib/repo/enrollments";
 import { LEVEL_IDS, LEVEL_LABEL, LEVEL_RAMP, LevelId } from "../../lib/levels";
 import { Wand2, Save, X, Trash2, Users, Plus, Check, Search, Inbox } from "lucide-react";
@@ -31,28 +32,18 @@ export default function AssignmentBoard({
   const [query, setQuery] = useState("");
   const [notice, setNotice] = useState("");
 
-  // Ghi danh đang hiệu lực, tra ngược theo học viên.
-  const enrolledByStudent = useMemo(() => {
-    const map = new Map<string, Enrollment>();
-    for (const e of enrollments) {
-      if (e.status === "enrolled") map.set(e.studentId, e);
-    }
-    return map;
-  }, [enrollments]);
-
   const levelClasses = useMemo(
     () => classes.filter(c => c.level === level && c.status !== "closed"),
     [classes, level]
   );
 
-  /* Chỉ hiện học viên chưa có ghi danh đang hiệu lực ở cấp độ này. Ràng buộc
-     "một cấp độ một lớp" được giữ ở đây, vì Firestore Rules không biểu diễn
-     được ràng buộc chéo-document. */
-  const unassigned = useMemo(() => students.filter(s => {
-    if (s.currentLevel !== level) return false;
-    const current = enrolledByStudent.get(s.id!);
-    return !current || current.level !== level;
-  }), [students, level, enrolledByStudent]);
+  /* Ai còn phải xếp vào cấp độ này — kể cả người khảo sát xếp C2/C3, vì cấp
+     khảo sát chỉ là đích lộ trình. Quy tắc nằm trong poolForLevel; giữ ở tầng
+     ứng dụng vì Firestore Rules không biểu diễn được ràng buộc chéo-document. */
+  const unassigned = useMemo(
+    () => poolForLevel(students, enrollments, classes, level),
+    [students, enrollments, classes, level]
+  );
 
   // Số chỗ còn lại, đã trừ cả đề xuất chưa lưu.
   const remainingOf = (cls: ClassRecord) => {
@@ -219,7 +210,7 @@ export default function AssignmentBoard({
 
           {unassigned.length === 0 ? (
             <p className="py-8 text-center text-[13px] text-ink-4 italic">
-              Mọi học viên {LEVEL_LABEL[level]} đều đã có lớp.
+              Không còn ai chờ xếp {LEVEL_LABEL[level]} — đã có lớp hoặc đang học lớp khác.
             </p>
           ) : (
             <>
@@ -299,7 +290,19 @@ export default function AssignmentBoard({
                   >
                     <div className="flex items-start justify-between gap-3">
                       <div className="min-w-0">
-                        <span className="block text-[13.5px] font-bold text-ink truncate">{s.fullName}</span>
+                        <div className="flex items-center gap-1.5 min-w-0">
+                          <span className="text-[13.5px] font-bold text-ink truncate">{s.fullName}</span>
+                          {/* Cấp khảo sát khác tab đang xem: người này học xong lớp
+                              này rồi vẫn còn lộ trình phía trước — giáo vụ cần thấy. */}
+                          {s.currentLevel !== level && (
+                            <span
+                              title={`Khảo sát xếp ${LEVEL_LABEL[s.currentLevel]} — sau lớp này còn học tiếp`}
+                              className={`flex-none px-1.5 py-0.5 rounded-[4px] text-[10px] font-extrabold tracking-[0.06em] bg-gradient-to-br ${LEVEL_RAMP[s.currentLevel].pill}`}
+                            >
+                              đích {s.currentLevel.replace("L", "C")}
+                            </span>
+                          )}
+                        </div>
                         <span className="block text-[11.5px] text-ink-4 truncate">{s.department}</span>
                         <span className="block text-[11.5px] text-ink-3 mt-1">
                           {s.availability?.days?.length

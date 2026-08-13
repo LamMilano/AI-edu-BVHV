@@ -1,4 +1,5 @@
 import { Student, ClassRecord } from "../types";
+import { canStudy } from "./levels";
 
 export interface MatchResult {
   classId: string;
@@ -25,7 +26,11 @@ const ineligible = (classId: string, reason: string): MatchResult =>
 export function scoreClassForStudent(student: Student, cls: ClassRecord): MatchResult {
   const classId = cls.id || "";
 
-  if (cls.level !== student.currentLevel) return ineligible(classId, "Khác cấp độ");
+  /* Chỉ chặn chiều đi lên: lớp cao hơn cấp tham chiếu thì học viên chưa với
+     tới. Chiều đi xuống luôn hợp lệ vì C2/C3 đều phải học lại nền C1. */
+  if (!canStudy(student.currentLevel, cls.level)) {
+    return ineligible(classId, "Cao hơn cấp tham chiếu");
+  }
   if (cls.status === "closed") return ineligible(classId, "Lớp đã đóng");
 
   const capacity = cls.capacity || 0;

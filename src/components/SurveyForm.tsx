@@ -681,7 +681,8 @@ export default function SurveyForm({ onSuccess }: SurveyFormProps) {
                   Cảm ơn {formData.studentName || "bạn"}
                 </h2>
                 <p className="text-[14px] text-ink-3 mt-1.5 leading-relaxed">
-                  Dựa trên câu trả lời, hệ thống đề xuất bạn học cấp độ bên cạnh. Bạn vẫn có thể đổi khi liên hệ giáo vụ.
+                  Dựa trên câu trả lời, hệ thống ước lượng cấp độ <b>đích</b> của bạn — cấp cao nhất bạn nên theo tới.
+                  Lộ trình vẫn bắt đầu từ Cấp độ 1 vì đó là phần nền dùng chung cho mọi cấp. Bạn có thể trao đổi thêm với giáo vụ.
                 </p>
                 <div className="mt-4 flex items-baseline gap-2">
                   <span className="text-[13px] text-ink-3">Điểm ước lượng</span>
@@ -694,7 +695,7 @@ export default function SurveyForm({ onSuccess }: SurveyFormProps) {
                 className={`relative overflow-hidden rounded-card p-5 md:w-[260px] flex-none text-white bg-gradient-to-br ${meta.grad} shadow-[0_18px_36px_-14px_rgb(20_51_110/0.7)]`}
               >
                 <span className="text-[10.5px] font-extrabold uppercase tracking-[0.09em] text-white/75">
-                  Đề xuất cho bạn
+                  Cấp độ đích của bạn
                 </span>
                 <div className="flex items-baseline gap-2.5 mt-2">
                   <span className="text-[38px] font-extrabold leading-[0.9] tracking-[-0.04em] tnum">{meta.num}</span>
