@@ -73,6 +73,109 @@ function AnswerSection({ step, title, children }: {
 const listAnswer = (items: string[] | undefined, fallback: string, other?: string) =>
   [...(items || []), other].filter(Boolean).join(", ") || fallback;
 
+/** Phiếu chi tiết của một học viên, mở ngay dưới dòng của họ trong bảng. */
+function SubmissionDetail({ sub, onClose }: { sub: SurveySubmission; onClose: () => void }) {
+  return (
+    <div className="rounded-field border border-line-soft bg-gradient-to-b from-[#FBFDFF] to-white p-5 sm:p-6 space-y-5 shadow-[0_2px_10px_-6px_rgb(20_51_110/0.25)]">
+      <div className="flex items-start justify-between gap-4 pb-4 border-b border-line-soft">
+        <div className="flex items-center gap-3">
+          <span className={`w-1.5 h-11 rounded-full flex-none bg-gradient-to-b ${LEVEL_RAMP[sub.assignedLevel].rail}`} />
+          <div>
+            <h4 className="text-[16px] font-extrabold tracking-[-0.02em]">{sub.studentName}</h4>
+            <span className="text-[12.5px] text-ink-3">{sub.department}</span>
+          </div>
+        </div>
+        <button
+          id="close-sub-detail"
+          onClick={onClose}
+          className="btn-secondary px-3.5 py-2 text-[13px] cursor-pointer flex-none"
+        >
+          Đóng
+        </button>
+      </div>
+
+      <div className="grid sm:grid-cols-2 gap-x-6 gap-y-5">
+        <div>
+          <span className="text-[10.5px] font-extrabold text-ink-4 uppercase tracking-[0.09em] block">Liên hệ</span>
+          <div className="mt-1.5 space-y-1 text-[13.5px] text-ink-2">
+            <p className="tnum">{sub.phone}</p>
+            <p className="break-all">{sub.email}</p>
+          </div>
+        </div>
+
+        <div>
+          <span className="text-[10.5px] font-extrabold text-ink-4 uppercase tracking-[0.09em] block">Kết quả xếp lớp</span>
+          <p className="mt-1.5 text-[13.5px] text-ink-2">
+            {LEVEL_LABEL[sub.assignedLevel]} ·{" "}
+            <span className="tnum font-semibold">{sub.score}/100</span>
+          </p>
+        </div>
+      </div>
+
+      {/* ── Trang 2 của phiếu: kinh nghiệm AI (câu 1–5) ── */}
+      <AnswerSection step="Trang 2" title="Bạn đã dùng AI đến đâu?">
+        <AnswerItem
+          label="1. Công cụ AI đã dùng"
+          value={listAnswer(sub.answers.q1_tools, "Chưa dùng bao giờ", sub.answers.q1_tools_other)}
+        />
+        <AnswerItem
+          label="2. Bản trả phí đang dùng"
+          value={listAnswer(sub.answers.q2_paid, "Chưa trả phí cho công cụ nào", sub.answers.q2_paid_other)}
+        />
+        <AnswerItem
+          label="3. Tần suất dùng AI cho công việc"
+          value={sub.answers.q3_frequency || "Chưa trả lời"}
+        />
+        <AnswerItem
+          label="4. Việc đã từng làm bằng AI"
+          value={listAnswer(sub.answers.q4_past_tasks, "Chưa làm việc nào")}
+        />
+        <AnswerItem
+          label="5. Khái niệm đã biết"
+          value={listAnswer(sub.answers.q5_concepts, "Chưa biết khái niệm nào")}
+          wide
+        />
+      </AnswerSection>
+
+      {/* ── Trang 3 của phiếu: mục tiêu và lịch học (câu 7–12) ── */}
+      <AnswerSection step="Trang 3" title="Bạn muốn đạt được gì?">
+        <AnswerItem
+          label="7. Mong muốn học nhất"
+          value={listAnswer(sub.answers.q7_goals, "Chưa chọn")}
+          wide
+        />
+        <AnswerItem
+          label="8. Định hướng"
+          value={sub.answers.q8_orientation || "Chưa trả lời"}
+          wide
+        />
+
+        <div className="sm:col-span-2">
+          <span className="text-[10.5px] font-extrabold text-ink-4 uppercase tracking-[0.09em] block">
+            9. Công việc lặp lại muốn cải thiện bằng AI
+          </span>
+          <p className="mt-2 text-[13.5px] text-ink-2 leading-relaxed rounded-r-[6px] border-l-[3px] border-brand-sky-deep bg-gradient-to-br from-brand-sky/12 to-brand-sky/4 px-3.5 py-3">
+            {sub.answers.q9_repetitive_tasks || "Không cung cấp mô tả"}
+          </p>
+        </div>
+
+        <AnswerItem
+          label="10. Khung giờ thuận tiện"
+          value={listAnswer(sub.answers.q10_timeframe, "Chưa chọn")}
+        />
+        <AnswerItem
+          label="11. Ngày trong tuần thuận tiện"
+          value={listAnswer(sub.answers.q11_days, "Chưa chọn")}
+        />
+        <AnswerItem
+          label="12. Thời lượng buổi phù hợp"
+          value={sub.answers.q12_duration || "Chưa chọn"}
+        />
+      </AnswerSection>
+    </div>
+  );
+}
+
 /* Trạng thái trống của form lớp. Tách ra hằng số để "Thêm mới" và "Hủy sửa"
    dùng chung đúng một định nghĩa, không lệch nhau khi thêm trường mới. */
 const emptyClass = {
@@ -449,8 +552,11 @@ export default function AdminDashboard({
                       </td>
                     </tr>
                   ) : (
-                    filteredSubmissions.map((sub, index) => (
-                      <tr key={sub.id} className="hover:bg-[#F6FAFD] transition-colors">
+                    filteredSubmissions.map((sub, index) => {
+                    const isOpen = selectedSubmission?.id === sub.id;
+                    return (
+                    <React.Fragment key={sub.id}>
+                      <tr className={`transition-colors ${isOpen ? "bg-[#F1F7FC]" : "hover:bg-[#F6FAFD]"}`}>
                         <td className="px-4 py-4.5 tnum text-ink-4">{index + 1}</td>
                         <td className="px-4 py-4.5 font-bold text-ink">{sub.studentName}</td>
                         <td className="px-4 py-4.5 text-ink-3">{sub.department}</td>
@@ -479,10 +585,10 @@ export default function AdminDashboard({
                         <td className="px-4 py-4.5 text-right space-x-2">
                           <button
                             id={`view-detail-${sub.id}`}
-                            onClick={() => setSelectedSubmission(sub)}
+                            onClick={() => setSelectedSubmission(isOpen ? null : sub)}
                             className="text-xs font-semibold text-brand-navy hover:text-brand-sky-deep transition-colors cursor-pointer"
                           >
-                            Xem chi tiết
+                            {isOpen ? "Thu gọn" : "Xem chi tiết"}
                           </button>
                           <button
                             id={`delete-sub-${sub.id}`}
@@ -493,121 +599,23 @@ export default function AdminDashboard({
                           </button>
                         </td>
                       </tr>
-                    ))
+
+                      {/* Phiếu chi tiết mở ngay dưới dòng của học viên đang xem */}
+                      {isOpen && (
+                        <tr className="bg-[#F1F7FC] !border-t-0">
+                          <td colSpan={8} className="px-4 pb-5 pt-0">
+                            <SubmissionDetail sub={sub} onClose={() => setSelectedSubmission(null)} />
+                          </td>
+                        </tr>
+                      )}
+                    </React.Fragment>
+                    );
+                    })
                   )}
                 </tbody>
               </table>
             </div>
           </div>
-          )}
-
-          {/* Phiếu chi tiết nằm ngoài ba chế độ xem, mở từ bảng phiếu khảo sát */}
-          {selectedSubmission && (
-            <div className="surface cut-corner p-6 sm:p-7 space-y-5">
-              <div className="flex items-start justify-between gap-4 pb-4 border-b border-line-soft">
-                <div className="flex items-center gap-3">
-                  <span className={`w-1.5 h-11 rounded-full flex-none bg-gradient-to-b ${LEVEL_RAMP[selectedSubmission.assignedLevel].rail}`} />
-                  <div>
-                    <h4 className="text-[18px] font-extrabold tracking-[-0.02em]">{selectedSubmission.studentName}</h4>
-                    <span className="text-[13px] text-ink-3">{selectedSubmission.department}</span>
-                  </div>
-                </div>
-                <button
-                  id="close-sub-detail"
-                  onClick={() => setSelectedSubmission(null)}
-                  className="btn-secondary px-3.5 py-2 text-[13px] cursor-pointer flex-none"
-                >
-                  Đóng
-                </button>
-              </div>
-
-              <div className="grid sm:grid-cols-2 gap-x-6 gap-y-5">
-                <div>
-                  <span className="text-[10.5px] font-extrabold text-ink-4 uppercase tracking-[0.09em] block">Liên hệ</span>
-                  <div className="mt-1.5 space-y-1 text-[13.5px] text-ink-2">
-                    <p className="tnum">{selectedSubmission.phone}</p>
-                    <p className="break-all">{selectedSubmission.email}</p>
-                  </div>
-                </div>
-
-                <div>
-                  <span className="text-[10.5px] font-extrabold text-ink-4 uppercase tracking-[0.09em] block">Kết quả xếp lớp</span>
-                  <p className="mt-1.5 text-[13.5px] text-ink-2">
-                    {LEVEL_LABEL[selectedSubmission.assignedLevel]} ·{" "}
-                    <span className="tnum font-semibold">{selectedSubmission.score}/100</span>
-                  </p>
-                </div>
-              </div>
-
-              {/* ── Trang 2 của phiếu: kinh nghiệm AI (câu 1–5) ── */}
-              <AnswerSection step="Trang 2" title="Bạn đã dùng AI đến đâu?">
-                <AnswerItem
-                  label="1. Công cụ AI đã dùng"
-                  value={listAnswer(
-                    selectedSubmission.answers.q1_tools,
-                    "Chưa dùng bao giờ",
-                    selectedSubmission.answers.q1_tools_other
-                  )}
-                />
-                <AnswerItem
-                  label="2. Bản trả phí đang dùng"
-                  value={listAnswer(
-                    selectedSubmission.answers.q2_paid,
-                    "Chưa trả phí cho công cụ nào",
-                    selectedSubmission.answers.q2_paid_other
-                  )}
-                />
-                <AnswerItem
-                  label="3. Tần suất dùng AI cho công việc"
-                  value={selectedSubmission.answers.q3_frequency || "Chưa trả lời"}
-                />
-                <AnswerItem
-                  label="4. Việc đã từng làm bằng AI"
-                  value={listAnswer(selectedSubmission.answers.q4_past_tasks, "Chưa làm việc nào")}
-                />
-                <AnswerItem
-                  label="5. Khái niệm đã biết"
-                  value={listAnswer(selectedSubmission.answers.q5_concepts, "Chưa biết khái niệm nào")}
-                  wide
-                />
-              </AnswerSection>
-
-              {/* ── Trang 3 của phiếu: mục tiêu và lịch học (câu 7–12) ── */}
-              <AnswerSection step="Trang 3" title="Bạn muốn đạt được gì?">
-                <AnswerItem
-                  label="7. Mong muốn học nhất"
-                  value={listAnswer(selectedSubmission.answers.q7_goals, "Chưa chọn")}
-                  wide
-                />
-                <AnswerItem
-                  label="8. Định hướng"
-                  value={selectedSubmission.answers.q8_orientation || "Chưa trả lời"}
-                  wide
-                />
-
-                <div className="sm:col-span-2">
-                  <span className="text-[10.5px] font-extrabold text-ink-4 uppercase tracking-[0.09em] block">
-                    9. Công việc lặp lại muốn cải thiện bằng AI
-                  </span>
-                  <p className="mt-2 text-[13.5px] text-ink-2 leading-relaxed rounded-r-[6px] border-l-[3px] border-brand-sky-deep bg-gradient-to-br from-brand-sky/12 to-brand-sky/4 px-3.5 py-3">
-                    {selectedSubmission.answers.q9_repetitive_tasks || "Không cung cấp mô tả"}
-                  </p>
-                </div>
-
-                <AnswerItem
-                  label="10. Khung giờ thuận tiện"
-                  value={listAnswer(selectedSubmission.answers.q10_timeframe, "Chưa chọn")}
-                />
-                <AnswerItem
-                  label="11. Ngày trong tuần thuận tiện"
-                  value={listAnswer(selectedSubmission.answers.q11_days, "Chưa chọn")}
-                />
-                <AnswerItem
-                  label="12. Thời lượng buổi phù hợp"
-                  value={selectedSubmission.answers.q12_duration || "Chưa chọn"}
-                />
-              </AnswerSection>
-            </div>
           )}
         </div>
       )}
