@@ -42,6 +42,13 @@ export default function App() {
   const [sessions, setSessions] = useState<Session[]>([]);
   const [adminLoading, setAdminLoading] = useState(false);
 
+  /* Đã nạp xong dữ liệu quản trị ít nhất một lần chưa. Chỉ lần đầu mới được
+     thay cả bảng điều khiển bằng vòng quay chờ; những lần nạp lại sau (lưu
+     phân lớp, bỏ ghi danh, điểm danh…) phải giữ AdminDashboard đứng nguyên.
+     Tháo nó ra là mất sạch state cục bộ — tab đang mở rơi về "Học viên",
+     người dùng tưởng hệ thống tự nhảy về trang chủ. */
+  const [adminLoadedOnce, setAdminLoadedOnce] = useState(false);
+
   // Hộp thoại xác nhận sau khi gửi khảo sát
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [lastSubmissionResult, setLastSubmissionResult] = useState<{
@@ -85,6 +92,7 @@ export default function App() {
       setStudents(stu);
       setEnrollments(enr);
       setSessions(ses);
+      setAdminLoadedOnce(true);
 
       /* Làm mới số liệu trang chủ. Khách vãng lai không có quyền ghi, nên đây
          là lần duy nhất public_stats được cập nhật — con số trên trang chủ trễ
@@ -128,6 +136,7 @@ export default function App() {
     setStudents([]);
     setEnrollments([]);
     setSessions([]);
+    setAdminLoadedOnce(false);
     setActiveTab("home");
   };
 
@@ -170,7 +179,7 @@ export default function App() {
 
             {activeTab === "admin" && (
               user ? (
-                adminLoading ? (
+                adminLoading && !adminLoadedOnce ? (
                   <div className="flex flex-col items-center justify-center py-24 space-y-4">
                     <div className="w-11 h-11 border-[3px] border-brand-sky-deep border-t-transparent rounded-full animate-spin" />
                     <p className="text-sm font-semibold text-ink-3">Đang tải dữ liệu quản trị…</p>
