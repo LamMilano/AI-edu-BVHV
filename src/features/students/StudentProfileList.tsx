@@ -1,21 +1,67 @@
 import React, { useMemo, useState } from "react";
-import { Student } from "../../types";
+import { Student, SurveySubmission, Enrollment, ClassRecord } from "../../types";
 import { MigrateReport } from "../../lib/migrate";
 import { LEVEL_RAMP, LEVEL_LABEL } from "../../lib/levels";
-import { RefreshCw, Search, AlertTriangle, Users } from "lucide-react";
+import {
+  buildStudentExport, studentExportFileName, STUDENT_EXPORT_WIDTHS,
+} from "../../lib/exportStudents";
+import { downloadXlsx } from "../../lib/xlsx";
+import { RefreshCw, Search, AlertTriangle, Users, Download } from "lucide-react";
 
 interface Props {
   students: Student[];
+  submissions: SurveySubmission[];
+  enrollments: Enrollment[];
+  classes: ClassRecord[];
   loading: boolean;
   migrating: boolean;
   report: MigrateReport | null;
   onMigrate: () => void;
 }
 
+/** Giá trị ô chọn phạm vi khi xuất toàn bộ hồ sơ (không lọc theo lớp). */
+const SCOPE_ALL = "";
+
 export default function StudentProfileList({
-  students, loading, migrating, report, onMigrate,
+  students, submissions, enrollments, classes, loading, migrating, report, onMigrate,
 }: Props) {
   const [needle, setNeedle] = useState("");
+  const [scope, setScope] = useState<string>(SCOPE_ALL);
+  const [exporting, setExporting] = useState(false);
+
+  /* Sĩ số hiện trên ô chọn để giáo vụ biết trước file sẽ có bao nhiêu dòng,
+     thay vì xuất ra rồi mới phát hiện lớp rỗng. */
+  const enrolledCountOf = (classId: string) =>
+    enrollments.filter(e => e.classId === classId && e.status === "enrolled").length;
+
+  const table = useMemo(
+    () => buildStudentExport({
+      students, submissions, enrollments, classes,
+      classId: scope || null,
+    }),
+    [students, submissions, enrollments, classes, scope]
+  );
+
+  const handleExport = async () => {
+    setExporting(true);
+    try {
+      const scopeLabel = scope
+        ? classes.find(c => c.id === scope)?.name || "lop"
+        : "tat-ca";
+      await downloadXlsx({
+        fileName: studentExportFileName(scopeLabel, new Date()),
+        sheetName: "Danh sách học viên",
+        header: table.header,
+        rows: table.rows,
+        columnWidths: STUDENT_EXPORT_WIDTHS,
+      });
+    } catch (err) {
+      console.error("Lỗi khi xuất danh sách học viên: ", err);
+      alert("Không xuất được file. Vui lòng thử lại.");
+    } finally {
+      setExporting(false);
+    }
+  };
 
   const filtered = useMemo(() => {
     const q = needle.trim().toLowerCase();
@@ -50,6 +96,45 @@ export default function StudentProfileList({
           {migrating ? "Đang dựng hồ sơ…" : "Dựng lại hồ sơ từ phiếu"}
         </button>
       </div>
+
+      {/* ── Xuất danh sách kèm toàn bộ câu trả lời khảo sát ── */}
+      <div className="rounded-field border border-line-soft bg-[#F6FAFD] px-4 py-3.5 flex flex-col sm:flex-row sm:items-end gap-3">
+        <div className="flex-1 min-w-0">
+          <label htmlFor="export-scope" className="block text-[12.5px] font-bold text-ink-2 mb-1.5">
+            Phạm vi xuất
+          </label>
+          <select
+            id="export-scope"
+            value={scope}
+            onChange={(e) => setScope(e.target.value)}
+            className="field w-full px-3.5 py-2.5 text-[13.5px]"
+          >
+            <option value={SCOPE_ALL}>Tất cả hồ sơ ({students.length})</option>
+            {classes.map(c => (
+              <option key={c.id} value={c.id}>
+                {c.name} ({enrolledCountOf(c.id || "")})
+              </option>
+            ))}
+          </select>
+        </div>
+
+        <button
+          id="btn-export-students"
+          onClick={handleExport}
+          disabled={exporting || table.rows.length === 0}
+          className="btn-primary flex items-center justify-center gap-2 px-4 py-2.5 text-[13.5px] cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed flex-none"
+        >
+          <Download className="w-4 h-4" />
+          {exporting ? "Đang tạo file…" : `Xuất Excel (${table.rows.length})`}
+        </button>
+      </div>
+
+      {/* Ô tìm kiếm chỉ lọc bảng bên dưới. Nói rõ ra, nếu không giáo vụ gõ tìm
+          rồi bấm xuất và tưởng file đã được lọc theo từ khóa. */}
+      <p className="text-[12px] text-ink-4 leading-relaxed">
+        File xuất theo phạm vi đã chọn ở trên và luôn kèm đủ {table.header.length} cột thông tin
+        khảo sát. Ô tìm kiếm không ảnh hưởng tới file.
+      </p>
 
       {report && (
         <div className="rounded-field border border-line-soft bg-[#F6FAFD] px-4 py-3 text-[13px] text-ink-2 space-y-1.5">

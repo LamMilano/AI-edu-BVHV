@@ -14,6 +14,7 @@ import DuplicateReview from "../features/students/DuplicateReview";
 import { migrateStudents, MigrateReport } from "../lib/migrate";
 import { markNotDuplicate, mergeStudents } from "../lib/repo/students";
 import { LEVEL_RAMP, LEVEL_LABEL } from "../lib/levels";
+import { SURVEY_LABELS, listAnswer } from "../lib/survey";
 import { formatDateVN, formatTimeVN } from "../lib/datetime";
 import { useStudentFilters } from "../hooks/useStudentFilters";
 import StudentStats from "./StudentStats";
@@ -69,10 +70,6 @@ function AnswerSection({ step, title, children }: {
   );
 }
 
-/** Gộp đáp án nhiều lựa chọn (kèm ô "Khác") thành một dòng chữ. */
-const listAnswer = (items: string[] | undefined, fallback: string, other?: string) =>
-  [...(items || []), other].filter(Boolean).join(", ") || fallback;
-
 /** Phiếu chi tiết của một học viên, mở ngay dưới dòng của họ trong bảng. */
 function SubmissionDetail({ sub, onClose }: { sub: SurveySubmission; onClose: () => void }) {
   return (
@@ -115,23 +112,23 @@ function SubmissionDetail({ sub, onClose }: { sub: SurveySubmission; onClose: ()
       {/* ── Trang 2 của phiếu: kinh nghiệm AI (câu 1–5) ── */}
       <AnswerSection step="Trang 2" title="Bạn đã dùng AI đến đâu?">
         <AnswerItem
-          label="1. Công cụ AI đã dùng"
+          label={SURVEY_LABELS.q1_tools}
           value={listAnswer(sub.answers.q1_tools, "Chưa dùng bao giờ", sub.answers.q1_tools_other)}
         />
         <AnswerItem
-          label="2. Bản trả phí đang dùng"
+          label={SURVEY_LABELS.q2_paid}
           value={listAnswer(sub.answers.q2_paid, "Chưa trả phí cho công cụ nào", sub.answers.q2_paid_other)}
         />
         <AnswerItem
-          label="3. Tần suất dùng AI cho công việc"
+          label={SURVEY_LABELS.q3_frequency}
           value={sub.answers.q3_frequency || "Chưa trả lời"}
         />
         <AnswerItem
-          label="4. Việc đã từng làm bằng AI"
+          label={SURVEY_LABELS.q4_past_tasks}
           value={listAnswer(sub.answers.q4_past_tasks, "Chưa làm việc nào")}
         />
         <AnswerItem
-          label="5. Khái niệm đã biết"
+          label={SURVEY_LABELS.q5_concepts}
           value={listAnswer(sub.answers.q5_concepts, "Chưa biết khái niệm nào")}
           wide
         />
@@ -140,19 +137,19 @@ function SubmissionDetail({ sub, onClose }: { sub: SurveySubmission; onClose: ()
       {/* ── Trang 3 của phiếu: mục tiêu và lịch học (câu 7–12) ── */}
       <AnswerSection step="Trang 3" title="Bạn muốn đạt được gì?">
         <AnswerItem
-          label="7. Mong muốn học nhất"
+          label={SURVEY_LABELS.q7_goals}
           value={listAnswer(sub.answers.q7_goals, "Chưa chọn")}
           wide
         />
         <AnswerItem
-          label="8. Định hướng"
+          label={SURVEY_LABELS.q8_orientation}
           value={sub.answers.q8_orientation || "Chưa trả lời"}
           wide
         />
 
         <div className="sm:col-span-2">
           <span className="text-[10.5px] font-extrabold text-ink-4 uppercase tracking-[0.09em] block">
-            9. Công việc lặp lại muốn cải thiện bằng AI
+            {SURVEY_LABELS.q9_repetitive_tasks}
           </span>
           <p className="mt-2 text-[13.5px] text-ink-2 leading-relaxed rounded-r-[6px] border-l-[3px] border-brand-sky-deep bg-gradient-to-br from-brand-sky/12 to-brand-sky/4 px-3.5 py-3">
             {sub.answers.q9_repetitive_tasks || "Không cung cấp mô tả"}
@@ -160,15 +157,15 @@ function SubmissionDetail({ sub, onClose }: { sub: SurveySubmission; onClose: ()
         </div>
 
         <AnswerItem
-          label="10. Khung giờ thuận tiện"
+          label={SURVEY_LABELS.q10_timeframe}
           value={listAnswer(sub.answers.q10_timeframe, "Chưa chọn")}
         />
         <AnswerItem
-          label="11. Ngày trong tuần thuận tiện"
+          label={SURVEY_LABELS.q11_days}
           value={listAnswer(sub.answers.q11_days, "Chưa chọn")}
         />
         <AnswerItem
-          label="12. Thời lượng buổi phù hợp"
+          label={SURVEY_LABELS.q12_duration}
           value={sub.answers.q12_duration || "Chưa chọn"}
         />
       </AnswerSection>
@@ -496,6 +493,9 @@ export default function AdminDashboard({
           {studentView === "profiles" && (
             <StudentProfileList
               students={students}
+              submissions={submissions}
+              enrollments={enrollments}
+              classes={classes}
               loading={studentsLoading}
               migrating={migrating}
               report={migrateReport}
