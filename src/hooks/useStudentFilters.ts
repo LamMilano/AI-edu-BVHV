@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
-import { SurveySubmission } from "../types";
+import { SurveySubmission, Enrollment, ClassRecord } from "../types";
 import { toDate } from "../lib/datetime";
+import { rosterEmails, isInRoster, classFilterOptions } from "../lib/classRoster";
 
 /* Toàn bộ phép lọc và sắp xếp danh sách học viên nằm ở đây, tách khỏi giao diện
    để đọc được quy tắc mà không phải lội qua JSX của bảng. */
@@ -47,10 +48,15 @@ function parseDateInput(value: string): Date | null {
   return isNaN(d.getTime()) ? null : d;
 }
 
-export function useStudentFilters(submissions: SurveySubmission[]) {
+export function useStudentFilters(
+  submissions: SurveySubmission[],
+  classes: ClassRecord[] = [],
+  enrollments: Enrollment[] = []
+) {
   const [searchTerm, setSearchTerm] = useState("");
   const [levelFilter, setLevelFilter] = useState<LevelFilter>("ALL");
   const [departmentFilter, setDepartmentFilter] = useState("ALL");
+  const [classFilter, setClassFilter] = useState("ALL");
   const [datePreset, setDatePreset] = useState<DatePreset>("ALL");
   const [customFrom, setCustomFrom] = useState("");
   const [customTo, setCustomTo] = useState("");
@@ -73,6 +79,26 @@ export function useStudentFilters(submissions: SurveySubmission[]) {
       setDepartmentFilter("ALL");
     }
   }, [departments, departmentFilter]);
+
+  // Các lớp chọn được, kèm sĩ số đang ghi danh
+  const classOptions = useMemo(
+    () => classFilterOptions(classes, enrollments),
+    [classes, enrollments]
+  );
+
+  // Lớp bị xóa hoặc bị đóng khi bộ lọc đang trỏ vào nó — cùng lý do với khoa/phòng.
+  useEffect(() => {
+    if (classFilter !== "ALL" && !classOptions.some(c => c.id === classFilter)) {
+      setClassFilter("ALL");
+    }
+  }, [classOptions, classFilter]);
+
+  /* Danh sách ghi danh của lớp đang lọc. Dựng một lần rồi tra Set cho từng
+     phiếu, thay vì quét lại mảng ghi danh ở mỗi dòng. */
+  const roster = useMemo(
+    () => (classFilter === "ALL" ? null : rosterEmails(enrollments, classFilter)),
+    [enrollments, classFilter]
+  );
 
   // Khoảng thời gian đang áp dụng; null nghĩa là không chặn đầu đó
   const { range, dateRangeError } = useMemo(() => {
@@ -126,6 +152,8 @@ export function useStudentFilters(submissions: SurveySubmission[]) {
       const matchesDepartment =
         departmentFilter === "ALL" || (s.department || "").trim() === departmentFilter;
 
+      const matchesClass = !roster || isInRoster(s.email, roster);
+
       let matchesDate = true;
       if (range) {
         const submitted = toDate(s.submittedAt);
@@ -135,7 +163,7 @@ export function useStudentFilters(submissions: SurveySubmission[]) {
         else if (range.to && submitted > range.to) matchesDate = false;
       }
 
-      return matchesSearch && matchesLevel && matchesDepartment && matchesDate;
+      return matchesSearch && matchesLevel && matchesDepartment && matchesClass && matchesDate;
     });
 
     // Gắn sẵn mốc thời gian để không gọi toDate lặp lại trong mỗi phép so sánh
@@ -163,18 +191,20 @@ export function useStudentFilters(submissions: SurveySubmission[]) {
     });
 
     return decorated.map((d) => d.sub);
-  }, [submissions, searchTerm, levelFilter, departmentFilter, range, sortKey]);
+  }, [submissions, searchTerm, levelFilter, departmentFilter, roster, range, sortKey]);
 
   const isFiltered =
     searchTerm.trim() !== "" ||
     levelFilter !== "ALL" ||
     departmentFilter !== "ALL" ||
+    classFilter !== "ALL" ||
     datePreset !== "ALL";
 
   const resetAll = () => {
     setSearchTerm("");
     setLevelFilter("ALL");
     setDepartmentFilter("ALL");
+    setClassFilter("ALL");
     setDatePreset("ALL");
     setCustomFrom("");
     setCustomTo("");
@@ -185,6 +215,7 @@ export function useStudentFilters(submissions: SurveySubmission[]) {
     // dữ liệu
     filtered,
     departments,
+    classOptions,
     totalCount: submissions.length,
     visibleCount: filtered.length,
     isFiltered,
@@ -193,6 +224,7 @@ export function useStudentFilters(submissions: SurveySubmission[]) {
     searchTerm,
     levelFilter,
     departmentFilter,
+    classFilter,
     datePreset,
     customFrom,
     customTo,
@@ -201,6 +233,7 @@ export function useStudentFilters(submissions: SurveySubmission[]) {
     setSearchTerm,
     setLevelFilter,
     setDepartmentFilter,
+    setClassFilter,
     setDatePreset,
     setCustomFrom,
     setCustomTo,

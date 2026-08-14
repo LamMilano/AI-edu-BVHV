@@ -51,9 +51,9 @@ const LEVEL_OPTIONS: { value: LevelFilter; label: string }[] = [
 ];
 
 export default function StudentFilterBar({
-  departments, totalCount, visibleCount, isFiltered, dateRangeError,
-  searchTerm, levelFilter, departmentFilter, datePreset, customFrom, customTo, sortKey,
-  setSearchTerm, setLevelFilter, setDepartmentFilter, setDatePreset,
+  departments, classOptions, totalCount, visibleCount, isFiltered, dateRangeError,
+  searchTerm, levelFilter, departmentFilter, classFilter, datePreset, customFrom, customTo, sortKey,
+  setSearchTerm, setLevelFilter, setDepartmentFilter, setClassFilter, setDatePreset,
   setCustomFrom, setCustomTo, setSortKey, resetAll,
 }: Props) {
   return (
@@ -81,8 +81,24 @@ export default function StudentFilterBar({
         />
       </div>
 
-      {/* ── Hàng 2: khoa · thời gian · sắp xếp ── */}
+      {/* ── Hàng 2: lớp · khoa · thời gian · sắp xếp ── */}
       <div className="flex flex-wrap items-center gap-x-3 gap-y-2.5 pt-3 border-t border-line-soft">
+        {/* Lọc theo lớp đứng đầu hàng: khi đang giảng dạy thì đây là câu hỏi
+            đầu tiên — "lớp này gồm những ai" — chứ không phải khoa hay ngày nộp. */}
+        <select
+          id="filter-class"
+          value={classFilter}
+          onChange={(e) => setClassFilter(e.target.value)}
+          className="field px-3 py-2 text-[13px] font-semibold max-w-[240px] cursor-pointer"
+        >
+          <option value="ALL">Tất cả lớp</option>
+          {classOptions.map((c) => (
+            <option key={c.id} value={c.id}>
+              {c.name} ({c.enrolledCount})
+            </option>
+          ))}
+        </select>
+
         <select
           id="filter-department"
           value={departmentFilter}

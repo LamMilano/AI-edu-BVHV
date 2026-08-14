@@ -55,7 +55,7 @@ function AnswerItem({ label, value, wide }: {
   );
 }
 
-/** Tiêu đề một trang khảo sát trong phiếu chi tiết. */
+/** Tiêu đề một nhóm câu hỏi trong phiếu chi tiết. */
 function AnswerSection({ step, title, children }: {
   step: string; title: string; children: React.ReactNode;
 }) {
@@ -109,41 +109,19 @@ function SubmissionDetail({ sub, onClose }: { sub: SurveySubmission; onClose: ()
         </div>
       </div>
 
-      {/* ── Trang 2 của phiếu: kinh nghiệm AI (câu 1–5) ── */}
-      <AnswerSection step="Trang 2" title="Bạn đã dùng AI đến đâu?">
-        <AnswerItem
-          label={SURVEY_LABELS.q1_tools}
-          value={listAnswer(sub.answers.q1_tools, "Chưa dùng bao giờ", sub.answers.q1_tools_other)}
-        />
-        <AnswerItem
-          label={SURVEY_LABELS.q2_paid}
-          value={listAnswer(sub.answers.q2_paid, "Chưa trả phí cho công cụ nào", sub.answers.q2_paid_other)}
-        />
-        <AnswerItem
-          label={SURVEY_LABELS.q3_frequency}
-          value={sub.answers.q3_frequency || "Chưa trả lời"}
-        />
-        <AnswerItem
-          label={SURVEY_LABELS.q4_past_tasks}
-          value={listAnswer(sub.answers.q4_past_tasks, "Chưa làm việc nào")}
-        />
-        <AnswerItem
-          label={SURVEY_LABELS.q5_concepts}
-          value={listAnswer(sub.answers.q5_concepts, "Chưa biết khái niệm nào")}
-          wide
-        />
-      </AnswerSection>
-
-      {/* ── Trang 3 của phiếu: mục tiêu và lịch học (câu 7–12) ── */}
-      <AnswerSection step="Trang 3" title="Bạn muốn đạt được gì?">
+      {/* ── Mục tiêu và nhu cầu (câu 7–9) ──
+          Đứng đầu phiếu chứ không theo thứ tự tờ khảo sát: khi chuẩn bị bài cho
+          một lớp, thứ cần đọc trước là học viên muốn đạt gì và đang vướng việc
+          gì, còn họ đã dùng ChatGPT chưa thì đọc sau cũng được. */}
+      <AnswerSection step="Ưu tiên đọc" title="Học viên muốn đạt được gì?">
         <AnswerItem
           label={SURVEY_LABELS.q7_goals}
-          value={listAnswer(sub.answers.q7_goals, "Chưa chọn")}
+          value={listAnswer(sub.answers?.q7_goals, "Chưa chọn")}
           wide
         />
         <AnswerItem
           label={SURVEY_LABELS.q8_orientation}
-          value={sub.answers.q8_orientation || "Chưa trả lời"}
+          value={sub.answers?.q8_orientation || "Chưa trả lời"}
           wide
         />
 
@@ -152,21 +130,49 @@ function SubmissionDetail({ sub, onClose }: { sub: SurveySubmission; onClose: ()
             {SURVEY_LABELS.q9_repetitive_tasks}
           </span>
           <p className="mt-2 text-[13.5px] text-ink-2 leading-relaxed rounded-r-[6px] border-l-[3px] border-brand-sky-deep bg-gradient-to-br from-brand-sky/12 to-brand-sky/4 px-3.5 py-3">
-            {sub.answers.q9_repetitive_tasks || "Không cung cấp mô tả"}
+            {sub.answers?.q9_repetitive_tasks || "Không cung cấp mô tả"}
           </p>
         </div>
+      </AnswerSection>
 
+      {/* ── Kinh nghiệm AI (câu 1–5) ── */}
+      <AnswerSection step="Nền tảng" title="Đã dùng AI đến đâu?">
+        <AnswerItem
+          label={SURVEY_LABELS.q1_tools}
+          value={listAnswer(sub.answers?.q1_tools, "Chưa dùng bao giờ", sub.answers?.q1_tools_other)}
+        />
+        <AnswerItem
+          label={SURVEY_LABELS.q2_paid}
+          value={listAnswer(sub.answers?.q2_paid, "Chưa trả phí cho công cụ nào", sub.answers?.q2_paid_other)}
+        />
+        <AnswerItem
+          label={SURVEY_LABELS.q3_frequency}
+          value={sub.answers?.q3_frequency || "Chưa trả lời"}
+        />
+        <AnswerItem
+          label={SURVEY_LABELS.q4_past_tasks}
+          value={listAnswer(sub.answers?.q4_past_tasks, "Chưa làm việc nào")}
+        />
+        <AnswerItem
+          label={SURVEY_LABELS.q5_concepts}
+          value={listAnswer(sub.answers?.q5_concepts, "Chưa biết khái niệm nào")}
+          wide
+        />
+      </AnswerSection>
+
+      {/* ── Lịch học thuận tiện (câu 10–12) ── */}
+      <AnswerSection step="Lịch học" title="Thời gian thuận tiện">
         <AnswerItem
           label={SURVEY_LABELS.q10_timeframe}
-          value={listAnswer(sub.answers.q10_timeframe, "Chưa chọn")}
+          value={listAnswer(sub.answers?.q10_timeframe, "Chưa chọn")}
         />
         <AnswerItem
           label={SURVEY_LABELS.q11_days}
-          value={listAnswer(sub.answers.q11_days, "Chưa chọn")}
+          value={listAnswer(sub.answers?.q11_days, "Chưa chọn")}
         />
         <AnswerItem
           label={SURVEY_LABELS.q12_duration}
-          value={sub.answers.q12_duration || "Chưa chọn"}
+          value={sub.answers?.q12_duration || "Chưa chọn"}
         />
       </AnswerSection>
     </div>
@@ -292,8 +298,24 @@ export default function AdminDashboard({
   });
 
   // Lọc & sắp xếp danh sách học viên (logic nằm ở src/hooks/useStudentFilters.ts)
-  const studentFilters = useStudentFilters(submissions);
-  const [selectedSubmission, setSelectedSubmission] = useState<SurveySubmission | null>(null);
+  const studentFilters = useStudentFilters(submissions, classes, enrollments);
+
+  /* Mở được nhiều phiếu cùng lúc: khi soạn bài cho một lớp, giảng viên hay
+     đặt hai học viên cạnh nhau để so, mà mở-một-đóng-một thì không so được. */
+  const [openSubIds, setOpenSubIds] = useState<Set<string>>(new Set());
+
+  const toggleSubmission = (id?: string) => {
+    if (!id) return;
+    setOpenSubIds(prev => {
+      const next = new Set(prev);
+      if (!next.delete(id)) next.add(id);
+      return next;
+    });
+  };
+
+  /* Hai bộ cột cho cùng một bảng phiếu. "goals" bỏ điểm số và liên hệ để lấy
+     chỗ cho câu 7-9 — đứng lớp thì cần biết học viên muốn gì, không cần số điện thoại. */
+  const [subColumns, setSubColumns] = useState<"general" | "goals">("general");
 
   // loading / action indicators
   const [loading, setLoading] = useState(false);
@@ -414,13 +436,26 @@ export default function AdminDashboard({
         await deleteSubmission(id);
       }
       onRefreshData();
-      if (selectedSubmission?.id === id) setSelectedSubmission(null);
+      setOpenSubIds(prev => {
+        if (!prev.has(id)) return prev;
+        const next = new Set(prev);
+        next.delete(id);
+        return next;
+      });
     } catch (err) {
       console.error("Lỗi khi xóa tài liệu: ", err);
     }
   };
 
   const filteredSubmissions = studentFilters.filtered;
+
+  /* Bộ cột "Mục tiêu" có 3 cột nội dung, bộ "Thông tin chung" có 4 — dòng báo
+     bảng rỗng phải trải đúng số cột, nếu không viền bảng sẽ hụt một ô. */
+  const subColSpan = subColumns === "general" ? 8 : 7;
+
+  const allSubsOpen =
+    filteredSubmissions.length > 0 &&
+    filteredSubmissions.every(s => s.id && openSubIds.has(s.id));
 
   return (
     <div className="space-y-8">
@@ -516,6 +551,44 @@ export default function AdminDashboard({
           <div className="surface p-5 space-y-4">
             <StudentFilterBar {...studentFilters} />
 
+            {/* ── Chọn bộ cột và mở/thu gọn hàng loạt ── */}
+            <div className="flex flex-wrap items-center justify-between gap-3 pt-3 border-t border-line-soft">
+              <div className="inline-flex rounded-field p-[3px] gap-0.5 bg-gradient-to-b from-[#EDF3FA] to-[#E1EAF4]">
+                {[
+                  { id: "general", label: "Thông tin chung" },
+                  { id: "goals", label: "Mục tiêu học tập" },
+                ].map(m => (
+                  <button
+                    key={m.id}
+                    id={`sub-columns-${m.id}`}
+                    onClick={() => setSubColumns(m.id as typeof subColumns)}
+                    className={`px-3.5 py-1.5 rounded-[6px] text-[12.5px] font-bold transition-all cursor-pointer whitespace-nowrap ${
+                      subColumns === m.id
+                        ? "bg-white text-brand-navy shadow-[0_2px_5px_-2px_rgb(20_51_110/0.3)]"
+                        : "text-ink-3 hover:text-ink"
+                    }`}
+                  >
+                    {m.label}
+                  </button>
+                ))}
+              </div>
+
+              {filteredSubmissions.length > 0 && (
+                <button
+                  id="btn-toggle-all-subs"
+                  onClick={() =>
+                    setOpenSubIds(allSubsOpen
+                      ? new Set()
+                      : new Set(filteredSubmissions.map(s => s.id!).filter(Boolean)))
+                  }
+                  className="flex items-center gap-1.5 text-[12.5px] font-bold text-brand-navy hover:text-brand-sky-deep transition-colors cursor-pointer"
+                >
+                  <ChevronDown className={`w-3.5 h-3.5 transition-transform ${allSubsOpen ? "rotate-180" : ""}`} />
+                  {allSubsOpen ? "Thu gọn tất cả" : `Mở tất cả (${filteredSubmissions.length})`}
+                </button>
+              )}
+            </div>
+
             {/* Submissions Table */}
             <div className="overflow-x-auto border border-line-soft rounded-field">
               <table className="w-full text-left border-collapse">
@@ -524,17 +597,27 @@ export default function AdminDashboard({
                     <th className="px-4 py-3 w-12">STT</th>
                     <th className="px-4 py-3">Học viên</th>
                     <th className="px-4 py-3">Khoa / Phòng</th>
-                    <th className="px-4 py-3">Điểm số</th>
-                    <th className="px-4 py-3">Xếp lớp đề xuất</th>
-                    <th className="px-4 py-3">Thời gian đăng ký</th>
-                    <th className="px-4 py-3">Liên hệ</th>
+                    {subColumns === "general" ? (
+                      <>
+                        <th className="px-4 py-3">Điểm số</th>
+                        <th className="px-4 py-3">Xếp lớp đề xuất</th>
+                        <th className="px-4 py-3">Thời gian đăng ký</th>
+                        <th className="px-4 py-3">Liên hệ</th>
+                      </>
+                    ) : (
+                      <>
+                        <th className="px-4 py-3">{SURVEY_LABELS.q7_goals}</th>
+                        <th className="px-4 py-3">{SURVEY_LABELS.q8_orientation}</th>
+                        <th className="px-4 py-3">{SURVEY_LABELS.q9_repetitive_tasks}</th>
+                      </>
+                    )}
                     <th className="px-4 py-3 text-right">Thao tác</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-line-soft text-xs">
                   {filteredSubmissions.length === 0 ? (
                     <tr>
-                      <td colSpan={8} className="text-center py-10 text-ink-4">
+                      <td colSpan={subColSpan} className="text-center py-10 text-ink-4">
                         {studentFilters.isFiltered ? (
                           <span className="inline-flex items-center gap-2">
                             <span className="italic">Không có học viên nào khớp bộ lọc.</span>
@@ -553,39 +636,59 @@ export default function AdminDashboard({
                     </tr>
                   ) : (
                     filteredSubmissions.map((sub, index) => {
-                    const isOpen = selectedSubmission?.id === sub.id;
+                    const isOpen = !!sub.id && openSubIds.has(sub.id);
                     return (
                     <React.Fragment key={sub.id}>
                       <tr className={`transition-colors ${isOpen ? "bg-[#F1F7FC]" : "hover:bg-[#F6FAFD]"}`}>
                         <td className="px-4 py-4.5 tnum text-ink-4">{index + 1}</td>
                         <td className="px-4 py-4.5 font-bold text-ink">{sub.studentName}</td>
                         <td className="px-4 py-4.5 text-ink-3">{sub.department}</td>
-                        <td className="px-4 py-4.5 tnum font-bold text-ink-2">{sub.score} / 100</td>
-                        <td className="px-4 py-4.5">
-                          <span
-                            className={`inline-flex px-2.5 py-1 rounded-[5px] text-[11.5px] font-bold bg-gradient-to-br ${
-                              LEVEL_RAMP[sub.assignedLevel].pill
-                            }`}
-                          >
-                            {LEVEL_LABEL[sub.assignedLevel]}
-                          </span>
-                        </td>
-                        <td className="px-4 py-4.5">
-                          <div className="space-y-0.5">
-                            <span className="block text-ink-3 tnum">{formatDateVN(sub.submittedAt)}</span>
-                            <span className="block text-[10px] text-ink-4 tnum">{formatTimeVN(sub.submittedAt)}</span>
-                          </div>
-                        </td>
-                        <td className="px-4 py-4.5">
-                          <div className="space-y-0.5">
-                            <span className="block text-ink-3 tnum">{sub.phone}</span>
-                            <span className="block text-[10px] text-ink-4 tnum">{sub.email}</span>
-                          </div>
-                        </td>
-                        <td className="px-4 py-4.5 text-right space-x-2">
+
+                        {subColumns === "general" ? (
+                          <>
+                            <td className="px-4 py-4.5 tnum font-bold text-ink-2">{sub.score} / 100</td>
+                            <td className="px-4 py-4.5">
+                              <span
+                                className={`inline-flex px-2.5 py-1 rounded-[5px] text-[11.5px] font-bold bg-gradient-to-br ${
+                                  LEVEL_RAMP[sub.assignedLevel].pill
+                                }`}
+                              >
+                                {LEVEL_LABEL[sub.assignedLevel]}
+                              </span>
+                            </td>
+                            <td className="px-4 py-4.5">
+                              <div className="space-y-0.5">
+                                <span className="block text-ink-3 tnum">{formatDateVN(sub.submittedAt)}</span>
+                                <span className="block text-[10px] text-ink-4 tnum">{formatTimeVN(sub.submittedAt)}</span>
+                              </div>
+                            </td>
+                            <td className="px-4 py-4.5">
+                              <div className="space-y-0.5">
+                                <span className="block text-ink-3 tnum">{sub.phone}</span>
+                                <span className="block text-[10px] text-ink-4 tnum">{sub.email}</span>
+                              </div>
+                            </td>
+                          </>
+                        ) : (
+                          <>
+                            {/* Ba cột câu trả lời dài, mỗi cột chặn ở một chiều rộng để
+                                bảng còn đọc được theo hàng ngang. Chi tiết đầy đủ nằm ở phiếu. */}
+                            <td className="px-4 py-4.5 text-ink-3 align-top max-w-[220px]">
+                              {listAnswer(sub.answers?.q7_goals, "—")}
+                            </td>
+                            <td className="px-4 py-4.5 text-ink-3 align-top max-w-[220px]">
+                              {sub.answers?.q8_orientation || "—"}
+                            </td>
+                            <td className="px-4 py-4.5 text-ink-2 align-top max-w-[320px]">
+                              {sub.answers?.q9_repetitive_tasks || <span className="text-ink-4">—</span>}
+                            </td>
+                          </>
+                        )}
+
+                        <td className="px-4 py-4.5 text-right space-x-2 align-top">
                           <button
                             id={`view-detail-${sub.id}`}
-                            onClick={() => setSelectedSubmission(isOpen ? null : sub)}
+                            onClick={() => toggleSubmission(sub.id)}
                             className="text-xs font-semibold text-brand-navy hover:text-brand-sky-deep transition-colors cursor-pointer"
                           >
                             {isOpen ? "Thu gọn" : "Xem chi tiết"}
@@ -603,8 +706,8 @@ export default function AdminDashboard({
                       {/* Phiếu chi tiết mở ngay dưới dòng của học viên đang xem */}
                       {isOpen && (
                         <tr className="bg-[#F1F7FC] !border-t-0">
-                          <td colSpan={8} className="px-4 pb-5 pt-0">
-                            <SubmissionDetail sub={sub} onClose={() => setSelectedSubmission(null)} />
+                          <td colSpan={subColSpan} className="px-4 pb-5 pt-0">
+                            <SubmissionDetail sub={sub} onClose={() => toggleSubmission(sub.id)} />
                           </td>
                         </tr>
                       )}
